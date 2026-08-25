@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="client/public/governtrace-logo-horizontal.png" alt="GovernTrace AI" width="480">
+  <img src="client/public/governtrace-logo-horizontal-white.png" alt="GovernTrace AI" width="480">
 </p>
 
 **An internal, multi-user platform for running an organization's AI governance program end-to-end** — from intake and risk scoring through cross-functional review, committee sign-off, and formal approval — with role-based access, a full audit trail, and email notifications throughout.
