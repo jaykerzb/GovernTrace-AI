@@ -1,4 +1,6 @@
-# GovernTrace AI
+<p align="center">
+  <img src="client/public/governtrace-logo-horizontal.png" alt="GovernTrace AI" width="480">
+</p>
 
 **An internal, multi-user platform for running an organization's AI governance program end-to-end** — from intake and risk scoring through cross-functional review, committee sign-off, and formal approval — with role-based access, a full audit trail, and email notifications throughout.
 
@@ -68,12 +70,14 @@ It's built to be adapted: the risk questions, review functions, AI type taxonomy
 
 ## Getting started
 
+Requires [Node.js](https://nodejs.org) 20+. One command handles everything else — installing dependencies, creating `server/.env` with a freshly generated secret, applying the database schema, and seeding demo accounts:
+
 ```bash
-npm install
-npm run prisma:migrate   # creates server/prisma/dev.db and applies the schema
-npm run prisma:seed      # seeds 5 demo accounts, one per role
-npm run dev               # runs the server (:4000) and client (:5173) together
+npm run setup
+npm run dev   # runs the server (:4000) and client (:5173) together
 ```
+
+(If you don't have dependencies installed yet, run `npm install` once first so `npm run setup` itself is available — or just run `node scripts/setup.js` directly, which works either way.)
 
 Then open **http://localhost:5173**. All seeded accounts share the password `governance123`:
 
@@ -87,7 +91,7 @@ Then open **http://localhost:5173**. All seeded accounts share the password `gov
 
 Every one of these defaults is itself editable from **Admin → Roles** once you're logged in.
 
-Copy `server/.env.example` to `server/.env` if you need to customize the port, client origin, or JWT secret — the defaults work out of the box for local development.
+`npm run setup` creates `server/.env` for you (with a random JWT secret) if it doesn't already exist — edit it afterward if you need to customize the port or client origin.
 
 ## The governance workflow
 

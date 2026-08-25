@@ -10,7 +10,7 @@
     "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "prisma:migrate": "npm run prisma:migrate -w server",
     "prisma:seed": "npm run prisma:seed -w server",
-    "setup": "npm install && npm run prisma:migrate && npm run prisma:seed"
+    "setup": "node scripts/setup.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
