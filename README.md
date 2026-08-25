@@ -1,67 +1,135 @@
 # GovernTrace AI
 
-An internal, multi-user application for running your organization's AI governance process end-to-end: register AI use cases, run structured risk assessments, auto-map applicable regulatory obligations, track evidence, and keep an audit trail — all gated by role.
+**An internal, multi-user platform for running an organization's AI governance program end-to-end** — from intake and risk scoring through cross-functional review, committee sign-off, and formal approval — with role-based access, a full audit trail, and email notifications throughout.
 
-## Stack
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React_19-61DAFB?style=flat&logo=react&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=flat&logo=prisma&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)
 
-- **Client**: React + TypeScript + Vite, Tailwind CSS, React Router, TanStack Query
-- **Server**: Node + TypeScript, Express, Prisma ORM
-- **Database**: SQLite (file-based, zero setup). The schema is provider-agnostic, so switching to Postgres later is a one-line change to `server/prisma/schema.prisma`'s `datasource` block plus a new `DATABASE_URL`.
+> **Status:** actively developed proof of concept. Functionally complete for a single-organization deployment; not yet hardened for production (see [Known limitations](#known-limitations)).
+
+## Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
+- [The governance workflow](#the-governance-workflow)
+- [Admin panel](#admin-panel)
+- [Project structure](#project-structure)
+- [Known limitations](#known-limitations)
+
+## Overview
+
+GovernTrace AI models a realistic enterprise AI governance process: someone registers an AI use case, it gets scored against a two-dimension risk questionnaire, that score routes it through the right functional review teams (privacy, security, model risk, etc.), a governance committee weighs in, and — depending on the risk tier — a sequential approval chain signs off before the system is considered approved. Every step is logged, every role's permissions are configurable, and the people who need to know get emailed.
+
+It's built to be adapted: the risk questions, review functions, AI type taxonomy, custom intake fields, email copy, and role privileges are all admin-editable at runtime, not hardcoded — a new organization can reshape the whole process from the admin panel without touching code.
+
+## Features
+
+**Registry & intake**
+- Guided multi-step intake wizard with autosave; a system exists as a `Draft` from the moment intake starts, so nothing is lost mid-flow
+- Filterable/sortable use case registry with bulk owner-reassignment, bulk status change, bulk delete, and CSV/PDF export
+- Org-editable custom intake fields and AI Type taxonomy (each type can carry an admin-written definition shown to the user while they pick)
+
+**Risk assessment**
+- Two-dimension scoring methodology: Dimension 1 trigger questions (informational review flags) and Dimension 2 weighted scoring (1/3/5 points across 9 questions) that determines approval authority
+- Delivery Model / Capability Tier / Risk Factor classification, with tier and risk-factor suggestions auto-derived from the answers
+- Full version history per system, with a formatted report view for any finalized assessment
+
+**Cross-functional review**
+- Risk classification auto-scopes which functional teams (Privacy, Security, Model Risk, Compliance, etc.) are in scope for a given system, each with its own structured work paper
+- A committee summary view aggregates every in-scope work paper's rating and recommendation into a single final disposition
+- A sequential, role-gated approval chain runs after committee sign-off — each step becomes actionable only once the one before it is approved
+
+**Communication & tracking**
+- Email notifications (SMTP or API/Resend, admin-configured) for every governance event, with per-notification-type templates an admin can customize and live-preview before saving
+- In-app notifications, a dashboard with live trend charts, a calendar of meetings/re-assessment due dates/deployment dates, and threaded comments on each use case
+- A full audit trail — per-system and system-wide — for every governance action
+
+**Policy repository**
+- Org-wide policy/standard/procedure documents, versioned, with full-text search across extracted content and inline preview for PDF/Word/Excel/PowerPoint files (no download required)
+
+**Access control**
+- Five built-in roles (Admin, Compliance Officer, System Owner, Approver, Viewer)
+- An admin-configurable privilege matrix — toggle exactly which of the 15 governance actions each role can perform, live, no redeploy — while Admin itself always retains full access as a lockout safeguard
+
+## Tech stack
+
+| | |
+|---|---|
+| **Client** | React 19 + TypeScript, Vite, Tailwind CSS, React Router, TanStack Query |
+| **Server** | Node + TypeScript, Express, Prisma ORM |
+| **Database** | SQLite (file-based, zero setup). Schema is provider-agnostic — moving to Postgres later is a one-line change to `server/prisma/schema.prisma`'s `datasource` block plus a new `DATABASE_URL` |
+| **Auth** | Cookie-based JWT sessions; every request re-checks the user's live role/active-status in the DB rather than trusting the token's claims |
 
 ## Getting started
 
 ```bash
 npm install
 npm run prisma:migrate   # creates server/prisma/dev.db and applies the schema
-npm run prisma:seed      # seeds demo users and the regulatory obligation reference data
-npm run dev               # runs the server (http://localhost:4000) and client (http://localhost:5173)
+npm run prisma:seed      # seeds 5 demo accounts, one per role
+npm run dev               # runs the server (:4000) and client (:5173) together
 ```
 
-Then open http://localhost:5173. The login page lists five seeded demo accounts (one per role), all sharing the password `governance123`.
+Then open **http://localhost:5173**. All seeded accounts share the password `governance123`:
 
-| Role | Email | Can do |
+| Role | Email | Scope |
 |---|---|---|
-| Admin | admin@example.com | Everything |
-| Compliance Officer | compliance@example.com | Run/finalize risk assessments, change system status, update obligations |
-| System Owner | owner@example.com | Register/edit systems they own, start risk assessments |
-| Approver | approver@example.com | Change system status (approve/deploy/etc.) |
-| Viewer | viewer@example.com | Read-only |
+| Admin | `admin@example.com` | Full access to everything, including the admin panel |
+| Compliance Officer | `compliance@example.com` | Run/finalize assessments, manage work papers & committee review, change status |
+| System Owner | `owner@example.com` | Register and manage systems they own, run assessments |
+| Approver | `approver@example.com` | Decide approval-chain steps, change status |
+| Viewer | `viewer@example.com` | Read-only |
 
-## How the governance model works
+Every one of these defaults is itself editable from **Admin → Roles** once you're logged in.
 
-1. **Register an AI use case through the guided intake wizard** (`Register use case` in the left nav) — a 4-step flow: **Basics** (use case name, description, capability category, line of business, business owner, application name, AI type/vendor, projected cost, target deployment date), **Data & deployment** (purpose, data types, deployment context), **Supporting documents** (optional — attach SOC reports, whitepapers, contracts on the spot or skip and add them later), and **Review**. The system is created as soon as step 1 is submitted (status `Draft`) and saved progressively at each step, so nothing is lost if you navigate away — the system's detail page shows a "Resume intake" banner linking back into the wizard until you finish the **Review** step and click **Complete intake** (status moves to `Intake`). Capability category, application name, projected cost, and target deployment date are all optional at the database level (same reasoning as purpose/data types/deployment context — a `Draft` record must be able to exist before every field is filled in) but marked required in the Basics step's form since they're meant to be captured up front.
-2. **Run a risk assessment** — the org's actual two-dimension methodology (`server/src/services/riskQuestionnaire.ts`), not an invented framework:
-   - **Dimension 1 — Trigger Questions**: 4 yes/no questions (customer-facing capability, regulated-decision recommendations, vendor use of customer data for training, full autonomy). Informational only — a "Yes" flags the system for additional review but doesn't affect the score or block anything.
-   - **Dimension 2 — Risk Scoring**: 9 questions (Decision Autonomy, Prompt/Input Manipulation, Business Impact, External Interaction, Data Sensitivity, Output Content, Explainability, Accuracy Criticality, Change Autonomy), each scored 1/3/5. The total (9–45) determines the approval authority: **below 30, AIGA may approve; at or above 30, AISC approval is required.**
-   
-   You can save a draft and come back to it; only a Compliance Officer or Admin can finalize it. (Assessments can't be started until intake is complete.)
-3. **Finalizing an assessment auto-populates obligations** — every regulatory obligation (managed in the admin panel's Obligations library) whose minimum approval authority is met by the system's score gets attached as a trackable checklist item, with a status (Not started / In progress / Satisfied / N/A) and a free-text evidence notes field.
-4. **Supporting documents live on the system's detail page too**, not just during intake — upload a SOC report, whitepaper, contract, or policy at any point in the system's life, with a category and optional description. Files are stored on disk under `server/uploads/<systemId>/`; anyone authenticated can view/download, but only the system's owner, Compliance Officers, or Admins can upload or delete.
-5. **Everything is audited** — registering a system, completing intake, starting/finalizing an assessment, changing status, updating an obligation, and uploading/deleting a document all write an audit log entry, visible on the system's detail page. Actions that aren't scoped to one system (user management, obligation library edits) land in the admin panel's **Activity** tab instead.
-6. **The dashboard** rolls all of this up: a live-updating (polls every 15s) donut chart of obligation status across the whole registry, systems by status/tier, systems still needing an assessment, and open obligations.
-7. **The AI Use Cases Registry** (`AI Use Cases Registry` in the left nav — the renamed AI systems list) can be filtered by name, business unit, status, approval authority, AI type, and owner.
+Copy `server/.env.example` to `server/.env` if you need to customize the port, client origin, or JWT secret — the defaults work out of the box for local development.
 
-### Navigation
+## The governance workflow
 
-The left sidebar collapses to an icon-only rail via the toggle at the bottom — the state persists per-browser in `localStorage`. It has: Dashboard, AI Use Cases Registry, Register use case (Admin/System Owner), Account (everyone), and — under an "Administration" divider — Admin (Admin role only).
+1. **Intake** — a use case is registered through the guided wizard (Basics → Data & Deployment → Supporting Documents → Review), saving progressively so an interrupted intake can always be resumed from the system's detail page.
+2. **Risk assessment** — Dimension 1 (trigger questions, informational) and Dimension 2 (9 weighted questions, 1/3/5 points each) produce a score; scores at or below the org's configured threshold (default 30) route to standard approval, above it to additional approval. Delivery Model / Capability Tier / Risk Factors are classified alongside the score.
+3. **Function work papers** — finalizing the assessment scopes in the relevant review teams based on that classification; each completes a structured work paper (section-by-section findings, risks, controls, a composite risk rating, and a recommendation).
+4. **Committee review** — a summary view pulls every work paper's result together for a final disposition (approved, approved with conditions, not approved, deferred, or remanded).
+5. **Approval chain** — an approved disposition kicks off a sequential sign-off chain, gated by role, with each step notifying whoever's turn it is next.
+6. **Ongoing** — supporting documents, comments, and calendar events (re-assessment due dates, meetings, deployment dates) attach to the system for its whole lifecycle, and everything above writes to the audit trail.
 
-### Account & Admin
+## Admin panel
 
-- **Account** (`/account`, any role): edit your own name/email, change your password, or deactivate your account. Deactivation is intentionally **not** a hard delete — a user who has ever owned a system, run an assessment, or touched an obligation/document is referenced by required foreign keys that make the audit trail trustworthy in the first place. Deactivating signs you out and blocks further logins immediately (auth checks the DB on every request, not just the session token), while everything you're historically attributed to stays intact. A guard blocks deactivating (or demoting) the last active Admin so the system can never lock itself out.
-- **Admin** (`/admin`, Admin role only): **Users** — create accounts, change roles, deactivate/reactivate, reset passwords. **Obligations library** — create/edit/delete the regulatory obligations that get auto-mapped onto systems (delete is blocked with a 409 if any system currently has that obligation attached). **Activity** — the system-level audit log for everything above.
+Everything about how the app behaves is editable at runtime from **Admin**, not hardcoded:
 
-### Seeded regulatory obligations
+- **Users** — create accounts, change roles, deactivate/reactivate, reset passwords
+- **Roles** — the privilege matrix described above
+- **Organization** — branding, terminology, approval threshold, risk-band cutoffs, re-assessment cadence
+- **Email** — SMTP/API delivery configuration, plus a **Email Templates** tab for per-notification-type subject/body/button-label with a live branded preview and test-send
+- **AI Types** — the intake taxonomy, each with an optional definition shown to the user while picking
+- **Risk Questionnaire** — the Dimension 1/2 questions and scoring options themselves
+- **Function Work Papers** — the review teams, their in-scope trigger conditions, and each one's section/question structure
+- **Custom Fields** — additional org-specific fields layered onto intake
+- **Activity** — the system-wide audit log for everything not scoped to one use case
 
-The obligation reference table starts seeded with a small illustrative set spanning **NIST AI RMF**, **Colorado SB 26-189**, **California AB 2013**, and **Texas TRAIGA** (see `server/prisma/seed.ts`) — but it's no longer seed-only: manage it going forward from Admin → Obligations library.
+## Project structure
 
-**These mappings are illustrative starting points, not legal advice.** The specific obligations, their trigger conditions, and applicable approval-authority thresholds should be reviewed and adjusted by legal/compliance counsel to match your organization's actual regulatory exposure.
+```
+client/   React app — pages, components, and one api/ hook per resource (TanStack Query)
+server/
+  prisma/  schema.prisma + migrations + seed script
+  src/
+    routes/     one file per resource, mounted in index.ts
+    services/   business logic + the lazy-seeded "org-editable list" pattern used throughout
+    middleware/ requireAuth / requireRole / requirePermission
+```
 
-> **Note on the risk model history**: the app originally used an invented 4-tier (Low/Medium/High/Critical) risk scale before switching to the org's real Dimension 1/Dimension 2 methodology and AIGA/AISC approval-authority split. Assessments finalized under the old model were one-time backfilled (old Low/Medium → AIGA, High/Critical → AISC) so historical systems still show a valid approval authority — their original saved answers remain in the audit trail for reference, but don't correspond to the current 13-question form.
+## Known limitations
 
-## What's built vs. what's next
+This is a proof of concept, not a production deployment. Before running this for real, at minimum:
 
-**Fully working:** auth & roles, guided AI use case intake wizard, filterable use case registry, risk assessment & tiering, obligation auto-mapping with evidence tracking, an editable obligations library, supporting document uploads (intake + ongoing), audit trail (per-system and system-level), a live dashboard chart, self-service account management, and an admin panel for users/obligations/activity.
-
-**Scaffolded but not wired into the UI yet:** the `ApprovalStep` data model exists (per-system approval steps with a required role, status, and comment) but there's no UI to generate or act on them yet. The natural next step is to auto-generate approval steps when a risk assessment is finalized (more steps for higher tiers) and add an approvals inbox/action UI for Approvers — the same pattern used for obligation auto-mapping in `server/src/services/obligationMapper.ts` can be mirrored for this.
-
-Other reasonable follow-ups: email notifications, and swapping local-disk document storage for cloud object storage if you outgrow a single-host deployment (the `Document` model/API shape doesn't need to change — only `server/src/lib/uploads.ts`).
+- Set a real, secret `JWT_SECRET` (the default in `.env.example` is explicitly a placeholder)
+- Add SSO/enterprise auth if your organization requires it — this currently uses email/password only
+- Review data-retention requirements — nothing currently ages out or archives automatically
+- Note that email provider secrets (SMTP password / API key) are stored in the database in plain columns, not encrypted at rest — acceptable for local dev, not for a shared deployment
+- Consider moving document storage off local disk (`server/uploads/`) to object storage if deploying beyond a single host
