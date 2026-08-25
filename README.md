@@ -16,6 +16,7 @@
 ## Contents
 
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
@@ -29,6 +30,19 @@
 GovernTrace AI models a realistic enterprise AI governance process: someone registers an AI use case, it gets scored against a two-dimension risk questionnaire, that score routes it through the right functional review teams (privacy, security, model risk, etc.), a governance committee weighs in, and — depending on the risk tier — a sequential approval chain signs off before the system is considered approved. Every step is logged, every role's permissions are configurable, and the people who need to know get emailed.
 
 It's built to be adapted: the risk questions, review functions, AI type taxonomy, custom intake fields, email copy, and role privileges are all admin-editable at runtime, not hardcoded — a new organization can reshape the whole process from the admin panel without touching code.
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard"><br><sub>Dashboard — a live snapshot of the registry and open compliance work</sub></td>
+<td width="50%"><img src="docs/screenshots/use-case-registry.png" alt="AI Use Case Registry"><br><sub>Filterable, sortable AI Use Case Registry</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/risk-assessment.png" alt="Risk assessment"><br><sub>Two-dimension risk assessment with live scoring</sub></td>
+<td width="50%"><img src="docs/screenshots/admin-roles.png" alt="Admin role privilege matrix"><br><sub>Admin-configurable role privilege matrix</sub></td>
+</tr>
+</table>
 
 ## Features
 
