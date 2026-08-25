@@ -85,7 +85,7 @@ model User {
 
 model AiSystem {
   id                   String       @id @default(cuid())
-  // Human-readable intake identifier (e.g. "SSB-AI-2026-014"), distinct from
+  // Human-readable intake identifier (e.g. "GT-AI-2026-014"), distinct from
   // the internal cuid `id`. Free text, assigned by whoever runs intake.
   useCaseId            String?
   // Defaults to the day intake starts but is editable, matching the AITO
