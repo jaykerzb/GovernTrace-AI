@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useDashboard } from "../api/dashboard";
 import { useCalendarEvents } from "../api/calendar";
@@ -33,8 +34,16 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 
 export function DashboardPage() {
   const { data, isLoading } = useDashboard();
-  const today = new Date();
-  const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+  // Memoized so these stay referentially/value-stable across re-renders —
+  // otherwise a fresh `new Date()` every render produces a new millisecond
+  // timestamp, which useCalendarEvents turns into a brand-new query key
+  // every time, forcing a fetch on every single render. Since that fetch
+  // completing triggers a re-render, which creates yet another new Date,
+  // this was a tight feedback loop firing dozens of requests per second.
+  const { today, weekFromNow } = useMemo(() => {
+    const now = new Date();
+    return { today: now, weekFromNow: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) };
+  }, []);
   const { data: weekEvents } = useCalendarEvents(today, weekFromNow);
 
   if (isLoading || !data) {
