@@ -4,14 +4,6 @@ import { useAuth } from "../auth/AuthContext";
 import { useOrgSettings } from "../api/orgSettings";
 import { ApiError } from "../api/client";
 
-const DEMO_ACCOUNTS = [
-  { role: "Admin", email: "admin@example.com" },
-  { role: "Compliance Officer", email: "compliance@example.com" },
-  { role: "System Owner", email: "owner@example.com" },
-  { role: "Approver", email: "approver@example.com" },
-  { role: "Viewer", email: "viewer@example.com" },
-];
-
 export function LoginPage() {
   const { user, login } = useAuth();
   const { data: orgSettings } = useOrgSettings();
@@ -86,27 +78,6 @@ export function LoginPage() {
             {submitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
-        <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-xs text-slate-500 dark:text-slate-400">
-          <p className="mb-2 font-medium text-slate-600 dark:text-slate-400">Seeded demo accounts (password: governance123)</p>
-          <ul className="space-y-1">
-            {DEMO_ACCOUNTS.map((a) => (
-              <li key={a.email} className="flex justify-between">
-                <span>{a.role}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail(a.email);
-                    setPassword("governance123");
-                  }}
-                  className="font-mono text-slate-700 dark:text-slate-300 underline decoration-dotted hover:text-slate-900 dark:hover:text-slate-100"
-                >
-                  {a.email}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </div>
   );
