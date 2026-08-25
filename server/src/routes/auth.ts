@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { signSession, SESSION_COOKIE } from "../lib/auth.js";
+import { signSession, SESSION_COOKIE, sessionCookieOptions } from "../lib/auth.js";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth.js";
 import { logAudit } from "../services/auditLog.js";
 import { wouldRemoveLastActiveAdmin } from "../services/adminGuards.js";
@@ -34,11 +34,7 @@ authRouter.post("/login", async (req, res) => {
   }
 
   const token = signSession({ userId: user.id, role: user.role });
-  res.cookie(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 8 * 60 * 60 * 1000,
-  });
+  res.cookie(SESSION_COOKIE, token, sessionCookieOptions(8 * 60 * 60 * 1000));
   res.json({
     id: user.id,
     name: user.name,
@@ -49,7 +45,7 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/logout", (_req, res) => {
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, sessionCookieOptions());
   res.status(204).end();
 });
 
@@ -131,6 +127,6 @@ authRouter.post("/deactivate", requireAuth, async (req: AuthedRequest, res) => {
     summary: `${user.name} deactivated their own account.`,
   });
 
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, sessionCookieOptions());
   res.status(204).end();
 });

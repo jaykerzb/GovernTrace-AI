@@ -34,7 +34,27 @@ import { permissionsRouter } from "./routes/permissions.js";
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173", credentials: true }));
+// Trust the first hop's X-Forwarded-* headers — needed so req.secure and the
+// client's real IP resolve correctly when this sits behind a reverse proxy
+// or tunnel (Cloudflare Tunnel, nginx, etc.), which terminates TLS itself
+// and forwards to this server over plain HTTP.
+app.set("trust proxy", 1);
+
+// CLIENT_ORIGIN accepts a comma-separated list so this can be reached from
+// more than one origin at once (e.g. http://localhost:5173 during local dev
+// plus a Cloudflare Tunnel / real domain) without a code change — just add
+// the extra origin(s) to the .env value.
+const allowedOrigins = (process.env.CLIENT_ORIGIN ?? "http://localhost:5173").split(",").map((o) => o.trim());
+app.use(
+  cors({
+    origin(origin, callback) {
+      // No Origin header (curl, server-to-server, same-origin) — allow.
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`Origin ${origin} is not allowed. Add it to CLIENT_ORIGIN in server/.env.`));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
