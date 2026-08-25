@@ -1,0 +1,560 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COMPLIANCE_OFFICER
+  SYSTEM_OWNER
+  APPROVER
+  VIEWER
+}
+
+enum SystemStatus {
+  DRAFT
+  INTAKE
+  RISK_ASSESSMENT
+  UNDER_REVIEW
+  APPROVED
+  DEPLOYED
+  MONITORING
+  RETIRED
+}
+
+enum AssessmentStatus {
+  DRAFT
+  FINALIZED
+}
+
+// Which body's approval a system's Dimension 2 risk score requires:
+// AIGA may approve below the threshold, AISC approval is required at/above it.
+enum ApprovalAuthority {
+  AIGA
+  AISC
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DocumentCategory {
+  SOC_REPORT
+  WHITEPAPER
+  POLICY
+  CONTRACT
+  OTHER
+}
+
+enum WorkPaperStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  // Self-service opt-out from the email channel — in-app notifications keep
+  // working regardless.
+  emailNotificationsEnabled Boolean @default(true)
+  createdAt    DateTime @default(now())
+
+  ownedSystems     AiSystem[]        @relation("SystemOwner")
+  riskAssessments  RiskAssessment[]  @relation("Assessor")
+  approvalSteps    ApprovalStep[]    @relation("Approver")
+  auditLogs        AuditLog[]        @relation("Actor")
+  documents        Document[]        @relation("Uploader")
+  reviewedWorkPapers FunctionWorkPaper[] @relation("WorkPaperReviewer")
+  finalizedCommitteeReviews CommitteeReview[] @relation("CommitteeReviewer")
+  notifications      Notification[]      @relation("NotificationRecipient")
+  createdMeetings     Meeting[]           @relation("MeetingCreator")
+  comments            Comment[]           @relation("CommentAuthor")
+  uploadedPolicies    Policy[]            @relation("PolicyUploader")
+}
+
+model AiSystem {
+  id                   String       @id @default(cuid())
+  // Human-readable intake identifier (e.g. "SSB-AI-2026-014"), distinct from
+  // the internal cuid `id`. Free text, assigned by whoever runs intake.
+  useCaseId            String?
+  // Defaults to the day intake starts but is editable, matching the AITO
+  // Intake & Risk Scoring Report's "Date Submitted" field.
+  dateSubmitted        DateTime?
+  name                 String
+  description          String
+  // Short, user-authored description of the AI capability (e.g. "document
+  // summarization", "fraud scoring") — free text, not an enum.
+  capabilityCategory   String?
+  businessUnit         String
+  // Free-text name of the person coordinating intake — not necessarily a
+  // system user account.
+  aitoCoordinator      String?
+  // Free-text name of the business sponsor/product owner — typically the
+  // business unit lead. Not a system user account; distinct from `owner`
+  // below, which is the platform account responsible for managing this
+  // system and drives permission checks (edit/delete/complete-intake).
+  sponsorName          String?
+  ownerId              String
+  owner                User         @relation("SystemOwner", fields: [ownerId], references: [id])
+  applicationName      String?
+  // References AiTypeOption.key — kept as a plain string (not a relation) so
+  // deactivating or renaming an option never breaks existing systems that
+  // used it.
+  aiType               String
+  vendorName           String?
+  projectedCost        Float?
+  targetDeploymentDate DateTime?
+  purpose              String?
+  // Why the use case is being pursued — distinct from `purpose` (what it does).
+  businessJustification String?
+  dataTypesUsed        String?
+  deploymentContext    String?
+  // Free-text catch-all for anything that doesn't fit a dedicated field.
+  notes                String?
+  // JSON blob keyed by CustomFieldDef.key — org-defined additional intake
+  // fields. Same pattern as RiskAssessment.answers.
+  customFieldValues    String       @default("{}")
+  status               SystemStatus @default(DRAFT)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  riskAssessments RiskAssessment[]
+  approvalSteps   ApprovalStep[]
+  auditLogs       AuditLog[]
+  documents       Document[]
+  workPapers      FunctionWorkPaper[]
+  committeeReview CommitteeReview?
+
+  // Denormalized pointers to the current/latest finalized assessment result,
+  // kept in sync by the risk assessment service so list views don't need a join.
+  currentApprovalAuthority ApprovalAuthority?
+  // Dimension 2 total score (9-45) from the latest finalized assessment —
+  // the basis for the Low/Moderate/High/Critical risk score badge shown in
+  // place of approval authority in list/summary views.
+  currentScore             Int?
+  // Dimension 1: true if any trigger question was answered "Yes". Informational only.
+  currentReviewTriggered   Boolean?
+  // Set to one year past a committee approval; drives the "due for
+  // re-assessment" surfacing on the dashboard, My Queue, and this record.
+  nextReviewDue            DateTime?
+
+  meetings Meeting[]
+  comments Comment[]
+}
+
+model RiskAssessment {
+  id           String             @id @default(cuid())
+  aiSystemId   String
+  aiSystem     AiSystem           @relation(fields: [aiSystemId], references: [id])
+  version      Int
+  status       AssessmentStatus   @default(DRAFT)
+  answers      String
+  // Dimension 2: total score (9 questions, 1/3/5 each, max 45) and the
+  // approval authority it maps to (<=30 AIGA, >30 AISC).
+  score              Int?
+  approvalAuthority  ApprovalAuthority?
+  // Dimension 1: true if any trigger question was answered "Yes".
+  reviewTriggered    Boolean?
+  // Classification (Delivery Model, Capability Tier, Risk Factors). Capability
+  // Tier and Risk Factors are auto-suggested from the answers above but can be
+  // overridden; Delivery Model has no auto-suggestion.
+  deliveryModel  String?
+  capabilityTier String?
+  riskFactors    String? // JSON array of RF numbers (1-10)
+  assessedById String
+  assessedBy   User               @relation("Assessor", fields: [assessedById], references: [id])
+  createdAt    DateTime           @default(now())
+  finalizedAt  DateTime?
+  // JSON snapshot of every active RiskQuestion (text/options) at the moment
+  // this assessment was finalized — so its report always renders exactly
+  // what was actually scored against, even if questions are edited later.
+  // Null for assessments finalized before this existed.
+  questionsSnapshot String?
+
+  @@unique([aiSystemId, version])
+}
+
+// Org-editable replacement for what used to be hardcoded Dimension 1/2
+// question arrays. `key` is the stable identifier stored in a
+// RiskAssessment's `answers` JSON — never reused once a question has been
+// answered anywhere, so historical answers stay attributable. Dimension 1
+// questions are informational triggers (any option with points > 0 flags
+// the assessment for review); Dimension 2 questions sum into the score.
+model RiskQuestion {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  dimension Int
+  order     Int      @default(0)
+  text      String
+  helpText  String   @default("")
+  // JSON array of { label: string, points: number }
+  options   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model FunctionWorkPaper {
+  id            String          @id @default(cuid())
+  aiSystemId    String
+  aiSystem      AiSystem        @relation(fields: [aiSystemId], references: [id])
+  // References ReviewFunctionDef.key — an org-editable list of review
+  // teams, not a fixed enum.
+  functionKey   String
+  status        WorkPaperStatus @default(NOT_STARTED)
+  // JSON: { [questionId]: "Yes" | "No" | "N/A" }
+  answers       String          @default("{}")
+  // JSON: { [questionId]: string } — the "Evidence / Notes" box under each question.
+  questionNotes String          @default("{}")
+  // JSON: { [sectionId]: { findings, identifiedRisks, mitigatingControls,
+  // requiredActions, riskRating: "Low"|"Moderate"|"High"|"Critical"|"N/A" } }
+  sectionData   String          @default("{}")
+  // Assessment Summary (composite, across all in-scope sections).
+  compositeRiskRating   String? // "Low" | "Moderate" | "High" | "Critical"
+  overallRecommendation String? // "NO_OBJECTION" | "APPROVE_WITH_CONDITIONS" | "OBJECTION" | "DEFERRED"
+  keyFindings           String?
+  rationale             String?
+  reviewerName          String?
+  reviewerTitle         String?
+  reviewerDate          DateTime?
+  reviewedById  String?
+  reviewedBy    User?           @relation("WorkPaperReviewer", fields: [reviewedById], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  completedAt   DateTime?
+
+  @@unique([aiSystemId, functionKey])
+}
+
+enum CommitteeReviewStatus {
+  DRAFT
+  FINALIZED
+}
+
+// The Stage 3 closeout record: one per system, consolidating every in-scope
+// function work paper's composite rating/recommendation into a final
+// AIGA/AISC committee decision. Work paper results are pulled live rather
+// than re-entered here.
+model CommitteeReview {
+  id                       String                @id @default(cuid())
+  aiSystemId               String                @unique
+  aiSystem                 AiSystem              @relation(fields: [aiSystemId], references: [id])
+  status                   CommitteeReviewStatus @default(DRAFT)
+  crossFunctionalConflicts String?
+  committeeDiscussion      String?
+  // "APPROVED" | "APPROVED_WITH_CONDITIONS" | "NOT_APPROVED" | "DEFERRED" | "REMANDED"
+  finalDisposition         String?
+  // Why the committee reached this disposition.
+  decisionJustification    String?
+  finalizedById            String?
+  finalizedBy              User?                 @relation("CommitteeReviewer", fields: [finalizedById], references: [id])
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  finalizedAt              DateTime?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("NotificationRecipient", fields: [userId], references: [id])
+  message   String
+  // Client-side route to navigate to when the notification is clicked, e.g.
+  // "/systems/abc123".
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model ApprovalStep {
+  id           String         @id @default(cuid())
+  aiSystemId   String
+  aiSystem     AiSystem       @relation(fields: [aiSystemId], references: [id])
+  stepType     String
+  requiredRole Role
+  // Determines sequencing among a system's steps — lower runs first, and a
+  // step only becomes actionable once every lower-sortOrder step is APPROVED.
+  sortOrder    Int            @default(0)
+  approverId   String?
+  approver     User?          @relation("Approver", fields: [approverId], references: [id])
+  status       ApprovalStatus @default(PENDING)
+  comment      String?
+  actedAt      DateTime?
+  createdAt    DateTime       @default(now())
+}
+
+model Document {
+  id             String           @id @default(cuid())
+  aiSystemId     String
+  aiSystem       AiSystem         @relation(fields: [aiSystemId], references: [id])
+  category       DocumentCategory
+  description    String?
+  originalName   String
+  storedFileName String
+  mimeType       String
+  sizeBytes      Int
+  uploadedById   String
+  uploadedBy     User             @relation("Uploader", fields: [uploadedById], references: [id])
+  createdAt      DateTime         @default(now())
+  // Best-effort text extraction at upload time (PDF/DOCX/XLSX/PPTX/plain
+  // text) for full-text search — null if the type isn't supported or
+  // extraction failed. Truncated to a sane cap.
+  extractedText  String?
+}
+
+enum PolicyCategory {
+  POLICY
+  STANDARD
+  PROCEDURE
+  GUIDELINE
+  OTHER
+}
+
+// Org-wide governance documents (policies, standards, procedures) — not tied
+// to any single AI use case, unlike Document. isActive marks a version as
+// superseded rather than gating deletion (nothing else references a Policy
+// row, so a hard delete is safe when actually wanted).
+model Policy {
+  id             String         @id @default(cuid())
+  title          String
+  description    String?
+  category       PolicyCategory
+  version        Int            @default(1)
+  storedFileName String
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  // Same best-effort search-indexing text as Document.extractedText.
+  extractedText  String?
+  isActive       Boolean        @default(true)
+  uploadedById   String
+  uploadedBy     User           @relation("PolicyUploader", fields: [uploadedById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  entityType String
+  entityId   String
+  // Null for system-level actions (user/admin management) that aren't
+  // scoped to a specific AI system.
+  aiSystemId String?
+  aiSystem   AiSystem? @relation(fields: [aiSystemId], references: [id])
+  action     String
+  actorId    String
+  actor      User      @relation("Actor", fields: [actorId], references: [id])
+  summary    String
+  timestamp  DateTime  @default(now())
+}
+
+// Singleton row (fixed id) holding this deployment's branding and
+// governance-terminology customization, so the platform can be tailored to
+// a given organization without a code change.
+model OrgSettings {
+  id                         String   @id @default("singleton")
+  orgName                    String   @default("GovernTrace AI")
+  logoUrl                    String?
+  primaryColor               String   @default("#0f172a")
+  // Display labels for the two approval-authority tiers. The underlying
+  // ApprovalAuthority enum (AIGA/AISC) stays fixed internally; these are
+  // just what the org calls them.
+  approvalAuthorityLowLabel  String   @default("AIGA")
+  approvalAuthorityHighLabel String   @default("AISC")
+  // When false, the two-tier concept is hidden from all reporting/UI text —
+  // badges, stat tiles, explanatory sentences, audit log, notifications —
+  // while the underlying threshold-based scoring and approval chain keep
+  // working unchanged.
+  showApprovalAuthorityLabels Boolean @default(true)
+  // Dimension 2 score at/below which the low tier applies; above it, the
+  // high tier is required.
+  approvalThreshold          Int      @default(30)
+  // Days after an approval before a system comes up for re-assessment.
+  reassessmentCadenceDays    Int      @default(365)
+  // Dimension 2 score (9-45) cutoffs for the Low/Moderate/High/Critical risk
+  // score badge: Low is score <= riskBandLowMax, Moderate <= riskBandModerateMax,
+  // High <= riskBandHighMax, and Critical is anything above that.
+  riskBandLowMax             Int      @default(15)
+  riskBandModerateMax        Int      @default(30)
+  riskBandHighMax            Int      @default(38)
+  updatedAt                  DateTime @updatedAt
+}
+
+// Org-editable replacement for what used to be a fixed AiType enum. `key` is
+// the stable value stored on AiSystem.aiType — never reused or repurposed
+// once a system references it. Options are deactivated rather than deleted
+// once in use, so historical systems keep a meaningful label.
+model AiTypeOption {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  label      String
+  // Explains what this type means, shown to the user while picking an AI
+  // Type during intake/edit so the label alone doesn't have to carry the
+  // full meaning.
+  definition String?
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+// Org-defined additional intake fields, layered onto the fixed AiSystem
+// field set. `key` is the stable identifier stored in AiSystem.customFieldValues
+// — never reused once a system has a value for it.
+model CustomFieldDef {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  // "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "SELECT"
+  fieldType String
+  // JSON array of option strings — only used when fieldType = "SELECT".
+  options   String?
+  required  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// Org-editable replacement for what used to be a fixed 5-team enum. `key` is
+// the stable identifier stored on FunctionWorkPaper.functionKey — never
+// reused once a work paper exists for it. Trigger fields gate whether this
+// function is in scope for a system at all, using the same
+// deliveryModels/capabilityTiers/riskFactors matching as a section (empty
+// array on a dimension = wildcard for that dimension).
+model ReviewFunctionDef {
+  id                     String   @id @default(cuid())
+  key                    String   @unique
+  label                  String
+  triggerDeliveryModels  String   @default("[]")
+  triggerCapabilityTiers String   @default("[]")
+  triggerRiskFactors     String   @default("[]")
+  sortOrder              Int      @default(0)
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+
+  sections WorkPaperSectionDef[]
+}
+
+// A group of questions within a review function's work paper. `key` is the
+// stable identifier stored inside a FunctionWorkPaper's `sectionData` JSON.
+model WorkPaperSectionDef {
+  id                     String   @id @default(cuid())
+  functionId             String
+  function               ReviewFunctionDef      @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  key                    String   @unique
+  title                  String
+  // Human-readable summary of the trigger fields below, shown next to the
+  // section (e.g. "All D/T. Always in scope.").
+  triggerLabel           String   @default("")
+  triggerDeliveryModels  String   @default("[]")
+  triggerCapabilityTiers String   @default("[]")
+  triggerRiskFactors     String   @default("[]")
+  sortOrder              Int      @default(0)
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+
+  questions WorkPaperQuestionDef[]
+}
+
+// `key` is the stable identifier stored inside a FunctionWorkPaper's
+// `answers`/`questionNotes` JSON — never reused once a work paper has
+// answered it.
+model WorkPaperQuestionDef {
+  id        String              @id @default(cuid())
+  sectionId String
+  section   WorkPaperSectionDef @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  key       String              @unique
+  text      String
+  citation  String              @default("")
+  sortOrder Int                 @default(0)
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+}
+
+// A scheduled governance meeting, optionally tied to a specific AI use case
+// (e.g. a committee sync isn't about any one system). Shown on the Calendar
+// page alongside AiSystem.nextReviewDue/targetDeploymentDate.
+model Meeting {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  aiSystemId  String?
+  aiSystem    AiSystem? @relation(fields: [aiSystemId], references: [id])
+  createdById String
+  createdBy   User      @relation("MeetingCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+// Informal discussion thread on an AI use case — not a governance action, so
+// unlike most other records here it's freely hard-deletable and isn't audit-logged.
+model Comment {
+  id         String    @id @default(cuid())
+  aiSystemId String
+  aiSystem   AiSystem  @relation(fields: [aiSystemId], references: [id])
+  authorId   String
+  author     User      @relation("CommentAuthor", fields: [authorId], references: [id])
+  body       String
+  createdAt  DateTime  @default(now())
+  editedAt   DateTime?
+}
+
+// Singleton row (fixed id) holding this deployment's email delivery
+// configuration — same pattern as OrgSettings. smtpPassword/apiKey are
+// plain columns (no encryption-at-rest) — a known, deliberate POC-stage
+// tradeoff, same posture as JWT_SECRET's "dev-only" default in .env.
+model EmailSettings {
+  id           String   @id @default("singleton")
+  // "DISABLED" | "SMTP" | "API"
+  provider     String   @default("DISABLED")
+  fromName     String   @default("GovernTrace AI")
+  fromAddress  String?
+  smtpHost     String?
+  smtpPort     Int?
+  smtpSecure   Boolean  @default(true)
+  smtpUser     String?
+  smtpPassword String?
+  apiKey       String?
+  updatedAt    DateTime @updatedAt
+}
+
+// Org-editable subject/body for each notification "kind"'s outgoing email —
+// separate from the in-app Notification.message, which stays fixed. `kind`
+// is one of a small fixed set of identifiers referenced from
+// notifyUser/notifyRoles call sites (see server/src/services/notifications.ts).
+// subject/body hold {{variableName}} placeholders rendered per-send.
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  kind      String   @unique
+  subject   String
+  body      String
+  // Label for the branded CTA button rendered below the body (e.g. "View in
+  // GovernTrace AI", "Review Comment").
+  ctaLabel  String   @default("View in GovernTrace AI")
+  updatedAt DateTime @updatedAt
+}
+
+// Admin-configurable role privileges. Presence of a (role, permission) row
+// means that role is granted that permission; absence means denied. `role`
+// stays the fixed Role enum (roles themselves aren't user-creatable) — only
+// which permissions each one holds is editable. ADMIN is deliberately never
+// gated through this table (see server/src/services/permissions.ts's
+// hasPermission — it short-circuits to true for ADMIN without a DB lookup),
+// so there's no path to locking every admin out of the app.
+model RolePermission {
+  id         String @id @default(cuid())
+  role       Role
+  permission String
+
+  @@unique([role, permission])
+}
