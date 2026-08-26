@@ -24,6 +24,13 @@ FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+# curl: Coolify's container healthcheck execs `curl` inside the container to
+# poll /api/health — without it, the healthcheck itself fails even though the
+# app is running fine, and Coolify rolls the deploy back thinking it's down.
+# openssl: silences Prisma's libssl-detection warning on this base image
+# (harmless either way, but this avoids relying on its guessed fallback).
+RUN apt-get update && apt-get install -y --no-install-recommends curl openssl && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY client/package.json client/package.json
 COPY server/package.json server/package.json
