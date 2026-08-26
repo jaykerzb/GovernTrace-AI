@@ -38,6 +38,10 @@ RUN npm ci --omit=dev --workspace=server
 
 COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/server/prisma server/prisma
+# The optional seed scripts (prisma:seed:demo) import directly from src/
+# (via tsx, not the compiled dist/) rather than duplicating that logic — so
+# src needs to be here too, even though the app itself only runs dist/.
+COPY --from=build /app/server/src server/src
 COPY --from=build /app/node_modules/.prisma node_modules/.prisma
 COPY --from=build /app/client/dist server/client
 
