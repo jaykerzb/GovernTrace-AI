@@ -1,5 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev on whatever OS you're running; the explicit
+  // Debian target is needed because the Docker build stage doesn't have
+  // OpenSSL installed when `prisma generate` runs, so it can't correctly
+  // auto-detect the runtime image's actual OpenSSL version (3.0.x, since
+  // the runtime stage does install it) and would otherwise generate an
+  // engine binary for the wrong one.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

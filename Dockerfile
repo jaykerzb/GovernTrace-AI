@@ -2,7 +2,7 @@
 # Node image, then assembles a slim runtime image with only what's needed to
 # run — no source, no dev dependencies, no build tools.
 
-FROM node:20-bookworm-slim AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
 # Installing from the workspace root once (rather than per-package) lets npm
@@ -20,7 +20,7 @@ RUN npm run build -w client
 RUN npx prisma generate --schema server/prisma/schema.prisma
 RUN npm run build -w server
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
