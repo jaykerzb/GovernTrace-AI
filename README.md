@@ -107,6 +107,12 @@ Every one of these defaults is itself editable from **Admin → Roles** once you
 
 `npm run setup` creates `server/.env` for you (with a random JWT secret) if it doesn't already exist — edit it afterward if you need to customize the port or client origin.
 
+The registry starts empty. If you'd rather see the app populated instead of a blank slate, seed a handful of sample AI use cases across different statuses and risk levels:
+
+```bash
+npm run prisma:seed:samples -w server
+```
+
 ## The governance workflow
 
 1. **Intake** — a use case is registered through the guided wizard (Basics → Data & Deployment → Supporting Documents → Review), saving progressively so an interrupted intake can always be resumed from the system's detail page.

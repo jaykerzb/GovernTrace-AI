@@ -52,4 +52,8 @@ Demo accounts (password: governance123):
   System Owner        owner@example.com
   Approver            approver@example.com
   Viewer              viewer@example.com
+
+Want a fuller demo instead of an empty registry? Run:
+  npm run prisma:seed:samples -w server
+to add a handful of sample AI use cases across different statuses.
 `);
