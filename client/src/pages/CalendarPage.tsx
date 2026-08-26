@@ -7,6 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import { usePermissions } from "../api/permissions";
 import { ApiError } from "../api/client";
 import type { CalendarEvent, CalendarEventType } from "../api/types";
+import { primaryButtonBase, inputClass } from "../lib/ui";
 
 const EVENT_COLORS: Record<CalendarEventType, string> = {
   MEETING: "#6366f1",
@@ -20,8 +21,6 @@ const EVENT_LABELS: Record<CalendarEventType, string> = {
   DEPLOYMENT: "Target Deployment",
 };
 
-const inputClass =
-  "w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
 
 function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -125,7 +124,7 @@ export function CalendarPage() {
         {canSchedule && (
           <button
             onClick={() => openNewMeetingForm(selectedDay)}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+            className={`${primaryButtonBase} px-4 py-2 text-sm`}
           >
             + New Meeting
           </button>
@@ -290,7 +289,7 @@ export function CalendarPage() {
               <button
                 type="submit"
                 disabled={createMeeting.isPending}
-                className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                className={`${primaryButtonBase} px-4 py-1.5 text-sm`}
               >
                 {createMeeting.isPending ? "Scheduling..." : "Schedule Meeting"}
               </button>

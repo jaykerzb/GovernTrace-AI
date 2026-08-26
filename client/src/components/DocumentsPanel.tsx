@@ -4,6 +4,7 @@ import { ApiError } from "../api/client";
 import { DocumentIcon, DownloadIcon, EyeIcon, TrashIcon, UploadIcon } from "./Icons";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import type { DocumentCategory, Document } from "../api/types";
+import { primaryButtonBase } from "../lib/ui";
 
 const CATEGORY_LABELS: Record<DocumentCategory, string> = {
   SOC_REPORT: "SOC Report",
@@ -124,7 +125,7 @@ export function DocumentsPanel({ systemId, canManage }: { systemId: string; canM
             <button
               onClick={handleUpload}
               disabled={upload.isPending}
-              className="flex items-center gap-1.5 rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+              className={`flex items-center gap-1.5 ${primaryButtonBase} px-3 py-1.5 text-xs`}
             >
               <UploadIcon className="h-3.5 w-3.5" />
               {upload.isPending ? "Uploading..." : "Upload"}

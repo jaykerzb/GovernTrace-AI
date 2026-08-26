@@ -4,6 +4,7 @@ import { useComments, useCreateComment, useUpdateComment, useDeleteComment } fro
 import { useAuth } from "../auth/AuthContext";
 import { usePermissions } from "../api/permissions";
 import { ApiError } from "../api/client";
+import { primaryButtonBase } from "../lib/ui";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
@@ -157,7 +158,7 @@ export function CommentsPanel({ systemId }: { systemId: string }) {
                       <button
                         onClick={() => handleSaveEdit(c.id)}
                         disabled={updateComment.isPending}
-                        className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                        className={`${primaryButtonBase} px-3 py-1 text-xs`}
                       >
                         Save
                       </button>
@@ -188,7 +189,7 @@ export function CommentsPanel({ systemId }: { systemId: string }) {
           <button
             onClick={handlePost}
             disabled={createComment.isPending || !draft.trim()}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-4 py-1.5 text-sm`}
           >
             {createComment.isPending ? "Posting..." : "Post Comment"}
           </button>

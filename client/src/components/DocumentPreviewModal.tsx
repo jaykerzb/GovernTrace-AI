@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { DownloadIcon } from "./Icons";
+import { primaryButtonBase } from "../lib/ui";
 
 // Office formats converted to HTML server-side for inline preview (see
 // server/src/services/textExtraction.ts's HTML_PREVIEWABLE_MIME_TYPES).
@@ -82,7 +83,7 @@ export function DocumentPreviewModal({ file, onClose }: { file: PreviewableFile;
               </p>
               <a
                 href={downloadUrl}
-                className="flex items-center gap-1.5 rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+                className={`flex items-center gap-1.5 ${primaryButtonBase} px-3 py-1.5 text-sm`}
               >
                 <DownloadIcon className="h-4 w-4" />
                 Download to View

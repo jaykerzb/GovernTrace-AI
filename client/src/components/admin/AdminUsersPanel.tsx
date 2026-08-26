@@ -3,6 +3,7 @@ import { useAdminUsers, useCreateUser, useUpdateUser, useResetPassword } from ".
 import { useAuth } from "../../auth/AuthContext";
 import { ApiError } from "../../api/client";
 import type { Role } from "../../api/types";
+import { primaryButtonBase, compactInputClass as inputClass } from "../../lib/ui";
 
 const ROLES: Role[] = ["ADMIN", "COMPLIANCE_OFFICER", "SYSTEM_OWNER", "APPROVER", "VIEWER"];
 
@@ -14,7 +15,6 @@ const ROLE_LABELS: Record<Role, string> = {
   VIEWER: "Viewer",
 };
 
-const inputClass = "rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
 
 export function AdminUsersPanel() {
   const { user: currentUser } = useAuth();
@@ -81,7 +81,7 @@ export function AdminUsersPanel() {
         <p className="text-sm text-slate-500 dark:text-slate-400">{users?.length ?? 0} Users</p>
         <button
           onClick={() => setShowCreate((s) => !s)}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+          className={`${primaryButtonBase} px-3 py-1.5 text-sm`}
         >
           {showCreate ? "Cancel" : "+ New User"}
         </button>
@@ -129,7 +129,7 @@ export function AdminUsersPanel() {
             <button
               type="submit"
               disabled={createUser.isPending}
-              className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+              className={`${primaryButtonBase} px-4 py-1.5 text-sm`}
             >
               {createUser.isPending ? "Creating..." : "Create User"}
             </button>
@@ -206,7 +206,7 @@ export function AdminUsersPanel() {
                         />
                         <button
                           onClick={() => handleResetPassword(u.id)}
-                          className="rounded-md bg-slate-900 dark:bg-slate-700 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+                          className={`${primaryButtonBase} px-2 py-1 text-xs`}
                         >
                           Save
                         </button>

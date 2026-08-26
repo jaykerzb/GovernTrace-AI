@@ -8,6 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 import { DocumentsPanel } from "../components/DocumentsPanel";
 import type { AiType } from "../api/types";
+import { primaryButtonBase, inputClass } from "../lib/ui";
 
 interface FormState {
   useCaseId: string;
@@ -55,8 +56,6 @@ const EMPTY_FORM: FormState = {
 
 const AUTOSAVE_DELAY_MS = 900;
 
-const inputClass =
-  "w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -473,7 +472,7 @@ export function IntakeWizardPage() {
           <button
             type="submit"
             disabled={completeIntake.isPending || !systemId}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-5 py-2.5 text-sm`}
           >
             {completeIntake.isPending ? "Completing..." : "Complete Intake"}
           </button>

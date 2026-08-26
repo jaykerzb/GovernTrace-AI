@@ -8,6 +8,7 @@ import { WorkPaperStatusBadge } from "../components/Badges";
 import { SectionNav, type SectionNavItem } from "../components/SectionNav";
 import { ApiError } from "../api/client";
 import type { FinalDisposition } from "../api/types";
+import { primaryButtonBase, inputClass } from "../lib/ui";
 
 const DISPOSITION_LABELS: Record<FinalDisposition, string> = {
   APPROVED: "Approved",
@@ -32,8 +33,6 @@ const RECOMMENDATION_LABELS: Record<string, string> = {
   DEFERRED: "Deferred",
 };
 
-const inputClass =
-  "w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none disabled:opacity-70";
 
 function SectionHeader({ title, hint }: { title: string; hint?: string }) {
   return (
@@ -302,7 +301,7 @@ export function CommitteeSummaryPage() {
               onClick={handleFinalize}
               disabled={!canFinalize || finalize.isPending}
               title={!canFinalize ? "A final disposition must be selected" : undefined}
-              className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+              className={`${primaryButtonBase} px-4 py-2 text-sm`}
             >
               {finalize.isPending ? "Finalizing..." : "Finalize Committee Summary"}
             </button>

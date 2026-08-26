@@ -7,6 +7,7 @@ import { WorkPaperStatusBadge } from "../components/Badges";
 import { SectionNav, type SectionNavItem } from "../components/SectionNav";
 import { ApiError } from "../api/client";
 import type { CompositeRiskRating, OverallRecommendation, SectionData, SectionRiskRating } from "../api/types";
+import { primaryButtonBase } from "../lib/ui";
 
 const ANSWER_OPTIONS = ["Yes", "No", "N/A"] as const;
 const SECTION_RISK_RATINGS: SectionRiskRating[] = ["Low", "Moderate", "High", "Critical", "N/A"];
@@ -405,7 +406,7 @@ export function WorkPaperPage() {
             onClick={handleComplete}
             disabled={!canComplete || complete.isPending}
             title={!canComplete ? "Answer all questions, rate every section, and set a composite rating before marking complete" : undefined}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-4 py-2 text-sm`}
           >
             {complete.isPending ? "Completing..." : "Mark Complete"}
           </button>

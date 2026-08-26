@@ -19,6 +19,7 @@ import { useAiTypeLabel } from "../api/aiTypeOptions";
 import { useCustomFieldDefs } from "../api/customFields";
 import { ApiError } from "../api/client";
 import type { RiskAssessment, SystemStatus } from "../api/types";
+import { primaryButtonBase } from "../lib/ui";
 
 const STATUS_OPTIONS: SystemStatus[] = [
   "DRAFT",
@@ -306,7 +307,7 @@ export function SystemDetailPage() {
               <button
                 onClick={handleStartAssessment}
                 disabled={startAssessment.isPending}
-                className="w-full rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                className={`w-full ${primaryButtonBase} px-3 py-1.5 text-sm`}
               >
                 {startAssessment.isPending ? "Starting..." : "Start Re-Assessment"}
               </button>
@@ -325,7 +326,7 @@ export function SystemDetailPage() {
               onClick={handleStartAssessment}
               disabled={startAssessment.isPending || isIntakeIncomplete}
               title={isIntakeIncomplete ? "Complete intake before starting a risk assessment" : undefined}
-              className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+              className={`${primaryButtonBase} px-3 py-1.5 text-sm`}
             >
               {startAssessment.isPending ? "Starting..." : "Start New Assessment"}
             </button>
@@ -438,7 +439,7 @@ export function SystemDetailPage() {
             </div>
             <Link
               to={`/systems/${id}/committee-review`}
-              className="shrink-0 rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+              className={`shrink-0 ${primaryButtonBase} px-3 py-1.5 text-xs`}
             >
               Open Committee Summary
             </Link>

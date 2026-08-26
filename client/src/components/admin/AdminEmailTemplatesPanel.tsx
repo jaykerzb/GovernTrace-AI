@@ -12,9 +12,8 @@ import {
   type EmailTemplateKind,
 } from "../../lib/emailTemplateSamples";
 import { ApiError } from "../../api/client";
+import { primaryButtonBase, inputClass } from "../../lib/ui";
 
-const inputClass =
-  "w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
 
 export function AdminEmailTemplatesPanel() {
   const { data: templates, isLoading } = useEmailTemplates();
@@ -131,7 +130,7 @@ export function AdminEmailTemplatesPanel() {
             type="button"
             onClick={handleSave}
             disabled={updateTemplate.isPending}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-4 py-2 text-sm`}
           >
             {updateTemplate.isPending ? "Saving..." : "Save Template"}
           </button>

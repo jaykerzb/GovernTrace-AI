@@ -14,9 +14,9 @@ import {
 } from "../../api/reviewFunctions";
 import { TriggerEditor } from "./TriggerEditor";
 import { ApiError } from "../../api/client";
+import { primaryButtonBase, compactInputClass } from "../../lib/ui";
 
-const inputClass =
-  "w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
+const inputClass = `w-full ${compactInputClass}`;
 
 const EMPTY_TRIGGERS: Triggers = { deliveryModels: [], capabilityTiers: [], riskFactors: [] };
 
@@ -56,7 +56,7 @@ function QuestionRow({ sectionKey, question }: { sectionKey: string; question: R
           <button
             onClick={handleSave}
             disabled={updateQuestion.isPending}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-2.5 py-1 text-xs`}
           >
             Save
           </button>
@@ -119,7 +119,7 @@ function AddQuestionForm({ sectionKey, onDone }: { sectionKey: string; onDone: (
         <button
           type="submit"
           disabled={createQuestion.isPending}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+          className={`${primaryButtonBase} px-2.5 py-1 text-xs`}
         >
           {createQuestion.isPending ? "Adding..." : "Add Question"}
         </button>
@@ -171,7 +171,7 @@ function SectionCard({ functionKey, section }: { functionKey: string; section: R
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleSaveTitle}
-                  className="rounded-md bg-slate-900 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+                  className={`${primaryButtonBase} px-2.5 py-1 text-xs`}
                 >
                   Save
                 </button>
@@ -225,7 +225,7 @@ function SectionCard({ functionKey, section }: { functionKey: string; section: R
                 <button
                   onClick={handleSaveTriggers}
                   disabled={updateSection.isPending}
-                  className="rounded-md bg-slate-900 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                  className={`${primaryButtonBase} px-2.5 py-1 text-xs`}
                 >
                   Save Scope
                 </button>
@@ -281,7 +281,7 @@ function AddSectionForm({ functionKey, onDone }: { functionKey: string; onDone: 
         <button
           type="submit"
           disabled={createSection.isPending}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+          className={`${primaryButtonBase} px-3 py-1.5 text-xs`}
         >
           {createSection.isPending ? "Adding..." : "Add Section"}
         </button>
@@ -335,7 +335,7 @@ function FunctionCard({ fn }: { fn: ReviewFunctionDef }) {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleSaveLabel}
-                  className="rounded-md bg-slate-900 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+                  className={`${primaryButtonBase} px-2.5 py-1 text-xs`}
                 >
                   Save
                 </button>
@@ -389,7 +389,7 @@ function FunctionCard({ fn }: { fn: ReviewFunctionDef }) {
                 <button
                   onClick={handleSaveTriggers}
                   disabled={updateFunction.isPending}
-                  className="rounded-md bg-slate-900 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                  className={`${primaryButtonBase} px-2.5 py-1 text-xs`}
                 >
                   Save Scope
                 </button>
@@ -451,7 +451,7 @@ function AddFunctionForm({ onDone }: { onDone: () => void }) {
         <button
           type="submit"
           disabled={createFunction.isPending}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+          className={`${primaryButtonBase} px-4 py-2 text-sm`}
         >
           {createFunction.isPending ? "Adding..." : "Add Review Function"}
         </button>
@@ -481,7 +481,7 @@ export function AdminReviewFunctionsPanel() {
         </p>
         <button
           onClick={() => setShowAddFunction((s) => !s)}
-          className="shrink-0 rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+          className={`shrink-0 ${primaryButtonBase} px-3 py-1.5 text-sm`}
         >
           {showAddFunction ? "Cancel" : "+ Add Review Function"}
         </button>

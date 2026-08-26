@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useSystem } from "../api/systems";
 import { SystemExportCard } from "../components/SystemExportCard";
+import { primaryButtonBase } from "../lib/ui";
 
 export function SystemExportPage() {
   const { id } = useParams();
@@ -18,7 +19,7 @@ export function SystemExportPage() {
         </Link>
         <button
           onClick={() => window.print()}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+          className={`${primaryButtonBase} px-4 py-2 text-sm`}
         >
           Print / Save as PDF
         </button>

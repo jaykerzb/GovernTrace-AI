@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useOrgSettings } from "../api/orgSettings";
 import { ApiError } from "../api/client";
+import { inputClass } from "../lib/ui";
 
 export function LoginPage() {
   const { user, login } = useAuth();
@@ -53,7 +54,7 @@ export function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none"
+              className={inputClass}
               placeholder="you@example.com"
             />
           </div>
@@ -64,7 +65,7 @@ export function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none"
+              className={inputClass}
               placeholder="••••••••"
             />
           </div>

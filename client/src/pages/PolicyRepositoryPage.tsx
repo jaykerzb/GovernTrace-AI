@@ -6,6 +6,7 @@ import { ApiError } from "../api/client";
 import { DocumentIcon, DownloadIcon, EyeIcon, TrashIcon, UploadIcon } from "../components/Icons";
 import { DocumentPreviewModal } from "../components/DocumentPreviewModal";
 import type { Policy, PolicyCategory } from "../api/types";
+import { primaryButtonBase, compactInputClass as inputClass } from "../lib/ui";
 
 const CATEGORY_LABELS: Record<PolicyCategory, string> = {
   POLICY: "Policy",
@@ -15,8 +16,6 @@ const CATEGORY_LABELS: Record<PolicyCategory, string> = {
   OTHER: "Other",
 };
 
-const inputClass =
-  "rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -112,7 +111,7 @@ export function PolicyRepositoryPage() {
             <button
               onClick={handleUpload}
               disabled={createPolicy.isPending}
-              className="flex items-center gap-1.5 rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+              className={`flex items-center gap-1.5 ${primaryButtonBase} px-4 py-1.5 text-sm`}
             >
               <UploadIcon className="h-3.5 w-3.5" />
               {createPolicy.isPending ? "Uploading..." : "Upload"}

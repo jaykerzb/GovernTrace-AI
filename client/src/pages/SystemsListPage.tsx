@@ -14,6 +14,7 @@ import { riskBand } from "../lib/riskBand";
 import { RISK_LABELS } from "../constants/riskColors";
 import { ApiError } from "../api/client";
 import type { AiSystem, SystemStatus } from "../api/types";
+import { primaryButtonBase } from "../lib/ui";
 
 type SortKey = "name" | "businessUnit" | "aiType" | "status" | "riskScore" | "createdAt";
 type SortDirection = "asc" | "desc";
@@ -285,7 +286,7 @@ export function SystemsListPage() {
               <button
                 onClick={handleBulkApply}
                 disabled={bulkUpdate.isPending || (!bulkOwnerId && !bulkStatus)}
-                className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                className={`${primaryButtonBase} px-3 py-1.5 text-xs`}
               >
                 {bulkUpdate.isPending ? "Applying..." : "Apply"}
               </button>

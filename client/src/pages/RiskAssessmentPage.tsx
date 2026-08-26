@@ -16,6 +16,7 @@ import { RiskScoreBadge, ReviewTriggerBadge } from "../components/Badges";
 import { SectionNav, type SectionNavItem } from "../components/SectionNav";
 import { ApiError } from "../api/client";
 import type { Question } from "../api/types";
+import { primaryButtonBase } from "../lib/ui";
 
 // Mirrors server/src/services/riskQuestionnaire.ts suggestCapabilityTier —
 // suggests a tier from Decision Autonomy (and the Dimension 1 full-autonomy
@@ -489,7 +490,7 @@ export function RiskAssessmentPage() {
                 onClick={handleFinalize}
                 disabled={!allAnswered || finalize.isPending}
                 title={!allAnswered ? "Answer all questions before finalizing" : undefined}
-                className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+                className={`${primaryButtonBase} px-4 py-2 text-sm`}
               >
                 {finalize.isPending ? "Finalizing..." : "Finalize Assessment"}
               </button>

@@ -2,9 +2,9 @@ import { useState, type FormEvent } from "react";
 import { useAdminRiskQuestions, useCreateRiskQuestion, useUpdateRiskQuestion } from "../../api/riskQuestions";
 import { ApiError } from "../../api/client";
 import type { QuestionOption } from "../../api/types";
+import { primaryButtonBase, compactInputClass } from "../../lib/ui";
 
-const inputClass =
-  "w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none";
+const inputClass = `w-full ${compactInputClass}`;
 
 function emptyOptions(dimension: 1 | 2): QuestionOption[] {
   return dimension === 1
@@ -107,7 +107,7 @@ function CreateQuestionForm({ dimension, onDone }: { dimension: 1 | 2; onDone: (
         <button
           type="submit"
           disabled={createQuestion.isPending}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+          className={`${primaryButtonBase} px-3 py-1.5 text-sm`}
         >
           {createQuestion.isPending ? "Adding..." : "Add Question"}
         </button>
@@ -150,7 +150,7 @@ function QuestionRow({ question }: { question: import("../../api/types").Questio
           <button
             onClick={handleSave}
             disabled={updateQuestion.isPending}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-3 py-1.5 text-sm`}
           >
             {updateQuestion.isPending ? "Saving..." : "Save"}
           </button>

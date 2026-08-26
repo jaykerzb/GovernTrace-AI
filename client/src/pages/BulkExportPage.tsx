@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { SystemExportCard } from "../components/SystemExportCard";
+import { primaryButtonBase } from "../lib/ui";
 
 export function BulkExportPage() {
   const [searchParams] = useSearchParams();
@@ -14,7 +15,7 @@ export function BulkExportPage() {
         <button
           onClick={() => window.print()}
           disabled={ids.length === 0}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+          className={`${primaryButtonBase} px-4 py-2 text-sm`}
         >
           Print / Save as PDF
         </button>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
+import { primaryButtonBase } from "../lib/ui";
 
 export function AccountPage() {
   const { user, updateProfile, changePassword, deactivateAccount } = useAuth();
@@ -122,7 +123,7 @@ export function AccountPage() {
           <button
             type="submit"
             disabled={profileSaving}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-4 py-2 text-sm`}
           >
             {profileSaving ? "Saving..." : "Save Profile"}
           </button>
@@ -172,7 +173,7 @@ export function AccountPage() {
           <button
             type="submit"
             disabled={passwordSaving}
-            className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
+            className={`${primaryButtonBase} px-4 py-2 text-sm`}
           >
             {passwordSaving ? "Saving..." : "Change Password"}
           </button>

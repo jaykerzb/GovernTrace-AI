@@ -6,6 +6,7 @@ import { useOrgSettings } from "../api/orgSettings";
 import { useAiTypeLabel } from "../api/aiTypeOptions";
 import { RiskScoreBadge, ReviewTriggerBadge } from "../components/Badges";
 import { riskBand } from "../lib/riskBand";
+import { primaryButtonBase } from "../lib/ui";
 
 export function AssessmentReportPage() {
   const { systemId, assessmentId } = useParams();
@@ -105,7 +106,7 @@ export function AssessmentReportPage() {
         </Link>
         <button
           onClick={() => window.print()}
-          className="rounded-md bg-slate-900 dark:bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+          className={`${primaryButtonBase} px-4 py-2 text-sm`}
         >
           Print / Save as PDF
         </button>
