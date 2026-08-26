@@ -320,13 +320,16 @@ export function RiskAssessmentPage() {
           Tier and Risk Factors are suggested from the answers above but can be overridden.
         </p>
         <div className="mb-5 grid gap-4 sm:grid-cols-2">
-          <div>
+          {/* `flex h-full flex-col` + `mt-auto` keeps the two selects bottom-aligned
+              even when the "(suggested)" tag wraps the Capability Tier label onto a
+              second line and its sibling's label doesn't. */}
+          <div className="flex h-full flex-col">
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Delivery Model</label>
             <select
               disabled={isFinalized}
               value={(isFinalized ? assessment.deliveryModel : deliveryModel) ?? ""}
               onChange={(e) => setDeliveryModel(e.target.value || null)}
-              className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 disabled:opacity-70"
+              className="mt-auto w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 disabled:opacity-70"
             >
               <option value="">— Select —</option>
               {(classificationOptions?.deliveryModels ?? []).map((opt) => (
@@ -336,7 +339,7 @@ export function RiskAssessmentPage() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="flex h-full flex-col">
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
               Capability Tier
               {!isFinalized && capabilityTier === null && suggestedTier && (
@@ -347,7 +350,7 @@ export function RiskAssessmentPage() {
               disabled={isFinalized}
               value={(isFinalized ? assessment.capabilityTier : effectiveTier) ?? ""}
               onChange={(e) => setCapabilityTier(e.target.value || null)}
-              className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 disabled:opacity-70"
+              className="mt-auto w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 disabled:opacity-70"
             >
               <option value="">— Select —</option>
               {(classificationOptions?.capabilityTiers ?? []).map((opt) => (

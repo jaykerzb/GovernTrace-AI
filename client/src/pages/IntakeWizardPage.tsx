@@ -311,10 +311,6 @@ export function IntakeWizardPage() {
                     </option>
                   ))}
                 </select>
-                {(() => {
-                  const definition = aiTypeOptions?.find((t) => t.key === form.aiType)?.definition;
-                  return definition ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{definition}</p> : null;
-                })()}
               </Field>
               <Field label="Projected Cost" hint="Estimated cost in USD (optional)">
                 <div className="relative">
@@ -333,6 +329,17 @@ export function IntakeWizardPage() {
                 </div>
               </Field>
             </div>
+            {(() => {
+              // Rendered as its own grid row (not inside the AI Type Field) so this
+              // variable-length text can't inflate that row's height and throw off
+              // the vertical alignment between the AI Type and Projected Cost inputs.
+              const definition = aiTypeOptions?.find((t) => t.key === form.aiType)?.definition;
+              return definition ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <p className="-mt-2 text-xs text-slate-400 dark:text-slate-500">{definition}</p>
+                </div>
+              ) : null;
+            })()}
             <div className="grid grid-cols-2 gap-4">
               <Field label="Requesting Business Unit" hint="Team or department requesting this">
                 <input

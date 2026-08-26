@@ -8,12 +8,15 @@ const MIN_SCORE = 9;
 const MAX_SCORE = 45;
 
 
+// `flex h-full flex-col` + `mt-auto` on the input wrapper keeps inputs bottom-aligned
+// within a grid row even when a sibling Field's hint text wraps to a different number
+// of lines (or has none) — otherwise the row's inputs would start at different heights.
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
-      {hint && <p className="mb-1 text-xs text-slate-400 dark:text-slate-500">{hint}</p>}
-      {children}
+      <p className="mb-1 min-h-[1rem] text-xs text-slate-400 dark:text-slate-500">{hint || " "}</p>
+      <div className="mt-auto">{children}</div>
     </div>
   );
 }
