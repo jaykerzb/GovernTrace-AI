@@ -84,16 +84,23 @@ It's built to be adapted: the risk questions, review functions, AI type taxonomy
 
 ## Getting started
 
-Requires [Node.js](https://nodejs.org) 20+. One command handles everything else — installing dependencies, creating `server/.env` with a freshly generated secret, applying the database schema, and seeding demo accounts:
+**Requirements:** [Node.js](https://nodejs.org) 22+ and npm (bundled with Node). Nothing else — the database is a local SQLite file, no external services required.
+
+### 1. Run the setup script
 
 ```bash
 npm run setup
-npm run dev   # runs the server (:4000) and client (:5173) together
 ```
 
-(If you don't have dependencies installed yet, run `npm install` once first so `npm run setup` itself is available — or just run `node scripts/setup.js` directly, which works either way.)
+This one command does everything: installs all dependencies, creates `server/.env` with a freshly generated JWT secret (if it doesn't already exist), applies the database schema, and seeds the 5 demo accounts below. Safe to re-run — it won't overwrite an existing `.env` or duplicate accounts.
 
-Then open **http://localhost:5173**. All seeded accounts share the password `governance123`:
+### 2. Start the app
+
+```bash
+npm run dev
+```
+
+Runs the server (`:4000`) and client (`:5173`) together. Open **http://localhost:5173** and sign in with any of the seeded accounts — all share the password `governance123`:
 
 | Role | Email | Scope |
 |---|---|---|
@@ -105,13 +112,19 @@ Then open **http://localhost:5173**. All seeded accounts share the password `gov
 
 Every one of these defaults is itself editable from **Admin → Roles** once you're logged in.
 
-`npm run setup` creates `server/.env` for you (with a random JWT secret) if it doesn't already exist — edit it afterward if you need to customize the port or client origin.
+### 3. (Optional) Add demo data
 
-The registry starts empty. If you'd rather see the app populated instead of a blank slate, seed ~15 sample AI use cases spanning every status and risk level, complete with risk assessments, work papers, and committee reviews:
+The registry starts empty — just the 5 accounts, no AI use cases. If you'd rather see the app populated than start from a blank slate, seed ~15 sample use cases spanning every status and risk level, complete with risk assessments, work papers, and committee reviews:
 
 ```bash
 npm run prisma:seed:demo -w server
 ```
+
+Run this *after* step 1 (it looks up the seeded Admin account to assign as owner). Also safe to re-run — it skips any use case that already exists by name.
+
+### Customizing the setup
+
+`server/.env` controls the port, client origin, and other server config — `npm run setup` creates it from `server/.env.example` with a random secret already filled in; edit it afterward for anything else you need to change.
 
 ## The governance workflow
 
