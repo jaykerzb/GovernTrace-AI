@@ -1,4 +1,7 @@
 import "dotenv/config";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -93,6 +96,19 @@ app.use("/api/admin", emailSettingsRouter);
 app.use("/api/admin", emailTemplatesRouter);
 app.use("/api/admin", adminRolesRouter);
 app.use("/api", permissionsRouter);
+
+// Serves the built client (client/dist, copied alongside this file's compiled
+// output at deploy time) so the whole app ships as one process/container —
+// no separate static host, no cross-origin cookies to configure. Only kicks
+// in when that folder actually exists, so local dev (client served by Vite
+// on its own port) is unaffected.
+const clientDist = path.join(path.dirname(fileURLToPath(import.meta.url)), "../client");
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 app.listen(port, () => {
   console.log(`GovernTrace AI server listening on http://localhost:${port}`);

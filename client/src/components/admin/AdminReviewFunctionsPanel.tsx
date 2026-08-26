@@ -29,7 +29,7 @@ function StatusPill({ isActive }: { isActive: boolean }) {
   );
 }
 
-function QuestionRow({ sectionKey, question }: { sectionKey: string; question: ReviewFunctionQuestion }) {
+function QuestionRow({ question }: { question: ReviewFunctionQuestion }) {
   const updateQuestion = useUpdateQuestion();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(question.text);
@@ -131,7 +131,7 @@ function AddQuestionForm({ sectionKey, onDone }: { sectionKey: string; onDone: (
   );
 }
 
-function SectionCard({ functionKey, section }: { functionKey: string; section: ReviewFunctionSection }) {
+function SectionCard({ section }: { section: ReviewFunctionSection }) {
   const updateSection = useUpdateSection();
   const [expanded, setExpanded] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -235,7 +235,7 @@ function SectionCard({ functionKey, section }: { functionKey: string; section: R
 
           <ul>
             {section.questions.map((q) => (
-              <QuestionRow key={q.id} sectionKey={section.id} question={q} />
+              <QuestionRow key={q.id} question={q} />
             ))}
           </ul>
 
@@ -399,7 +399,7 @@ function FunctionCard({ fn }: { fn: ReviewFunctionDef }) {
 
           <div className="space-y-2">
             {fn.sections.map((s) => (
-              <SectionCard key={s.id} functionKey={fn.id} section={s} />
+              <SectionCard key={s.id} section={s} />
             ))}
           </div>
 
