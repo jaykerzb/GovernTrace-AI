@@ -107,10 +107,10 @@ Every one of these defaults is itself editable from **Admin → Roles** once you
 
 `npm run setup` creates `server/.env` for you (with a random JWT secret) if it doesn't already exist — edit it afterward if you need to customize the port or client origin.
 
-The registry starts empty. If you'd rather see the app populated instead of a blank slate, seed a handful of sample AI use cases across different statuses and risk levels:
+The registry starts empty. If you'd rather see the app populated instead of a blank slate, seed ~15 sample AI use cases spanning every status and risk level, complete with risk assessments, work papers, and committee reviews:
 
 ```bash
-npm run prisma:seed:samples -w server
+npm run prisma:seed:demo -w server
 ```
 
 ## The governance workflow
