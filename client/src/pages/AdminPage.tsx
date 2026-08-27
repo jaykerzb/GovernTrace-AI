@@ -10,8 +10,9 @@ import { AdminCustomFieldsPanel } from "../components/admin/AdminCustomFieldsPan
 import { AdminEmailSettingsPanel } from "../components/admin/AdminEmailSettingsPanel";
 import { AdminEmailTemplatesPanel } from "../components/admin/AdminEmailTemplatesPanel";
 import { AdminRolesPanel } from "../components/admin/AdminRolesPanel";
+import { AdminSystemPanel } from "../components/admin/AdminSystemPanel";
 
-type Tab = "users" | "activity" | "organization" | "email" | "email-templates" | "roles" | "ai-types" | "risk-questions" | "work-papers" | "custom-fields";
+type Tab = "users" | "activity" | "organization" | "email" | "email-templates" | "roles" | "ai-types" | "risk-questions" | "work-papers" | "custom-fields" | "system";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "users", label: "Users" },
@@ -24,6 +25,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "risk-questions", label: "Risk Questionnaire" },
   { key: "work-papers", label: "Function Work Papers" },
   { key: "custom-fields", label: "Custom Fields" },
+  { key: "system", label: "System" },
 ];
 
 export function AdminPage() {
@@ -69,6 +71,7 @@ export function AdminPage() {
       {tab === "risk-questions" && <AdminRiskQuestionsPanel />}
       {tab === "work-papers" && <AdminReviewFunctionsPanel />}
       {tab === "custom-fields" && <AdminCustomFieldsPanel />}
+      {tab === "system" && <AdminSystemPanel />}
     </div>
   );
 }

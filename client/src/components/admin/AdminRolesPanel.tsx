@@ -38,8 +38,8 @@ export function AdminRolesPanel() {
       <p className="text-sm text-slate-500 dark:text-slate-400">
         Controls which of the 5 roles can perform each governance action. Admins always have full access and can't be
         changed here — this only governs the other four roles. Actions that manage the admin panel itself (users, org
-        settings, email, the risk questionnaire, review functions, AI types, custom fields) stay Admin-only and aren't
-        listed below.
+        settings, email, the risk questionnaire, review functions, AI types, custom fields, system updates/network
+        settings) stay Admin-only and aren't listed below.
       </p>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

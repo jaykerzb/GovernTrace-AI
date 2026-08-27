@@ -141,9 +141,11 @@ Run this *after* step 2 (it looks up the seeded Admin account to assign as owner
 
 ## Deploying on a Linux VM
 
-For a standing deployment (rather than local dev), `deploy/governtrace-ai.service` is a systemd unit that runs the app as a persistent background service — the compiled server serves the built client itself, so it's a single process. See the comments in that file for the install steps.
+For a standing deployment (rather than local dev), `deploy/governtrace-ai.service` is a systemd unit that runs the app as a persistent background service — the compiled server serves the built client itself, so it's a single process. See `deploy/README.md` for the full install steps, including the sudo rule needed for self-restart.
 
-Once it's set up, `scripts/update.sh` checks GitHub for new commits, shows you what's new, and — if you confirm — stops the service, pulls, rebuilds, applies any new database migrations, and starts it back up.
+Once it's set up, updates can be installed two ways:
+- **From the CLI:** `scripts/update.sh` checks GitHub for new commits, shows you what's new, and — if you confirm — stops the service, pulls, rebuilds, applies any new database migrations, and starts it back up.
+- **From the app itself:** Admin → System does the same thing with a button, and also lets an Admin edit the port, CORS allowed origins, and cookie security flag without SSHing in.
 
 ## The governance workflow
 

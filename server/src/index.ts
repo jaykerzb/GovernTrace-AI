@@ -33,6 +33,7 @@ import { emailSettingsRouter } from "./routes/emailSettings.js";
 import { emailTemplatesRouter } from "./routes/emailTemplates.js";
 import { adminRolesRouter } from "./routes/adminRoles.js";
 import { permissionsRouter } from "./routes/permissions.js";
+import { systemRouter } from "./routes/system.js";
 
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -96,6 +97,7 @@ app.use("/api/admin", emailSettingsRouter);
 app.use("/api/admin", emailTemplatesRouter);
 app.use("/api/admin", adminRolesRouter);
 app.use("/api", permissionsRouter);
+app.use("/api/admin", systemRouter);
 
 // Serves the built client (client/dist, copied alongside this file's compiled
 // output at deploy time) so the whole app ships as one process/container —
