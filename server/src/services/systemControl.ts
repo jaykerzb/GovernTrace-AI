@@ -126,11 +126,11 @@ export type UpdateProgressEvent =
 export async function installUpdate(onEvent: (event: UpdateProgressEvent) => void): Promise<UpdateInstallResult> {
   const steps: StepResult[] = [];
 
-  async function runStep(command: string, args: string[]): Promise<void> {
+  async function runStep(command: string, args: string[], cwd?: string): Promise<void> {
     const label = [command, ...args].join(" ");
     onEvent({ type: "step-start", command: label });
     try {
-      const result = await runStreaming(command, args, (chunk) => onEvent({ type: "step-output", chunk }));
+      const result = await runStreaming(command, args, (chunk) => onEvent({ type: "step-output", chunk }), cwd);
       steps.push(result);
       onEvent({ type: "step-done", command: label });
     } catch (err) {
@@ -153,8 +153,15 @@ export async function installUpdate(onEvent: (event: UpdateProgressEvent) => voi
     // migration that adds/changes a model makes the build fail with
     // "property does not exist on type PrismaClient" otherwise, even
     // though the code and schema are perfectly in sync.
-    await runStep("npx", ["prisma", "generate", "--schema", "server/prisma/schema.prisma"]);
-    await runStep("npx", ["prisma", "migrate", "deploy", "--schema", "server/prisma/schema.prisma"]);
+    //
+    // Run with cwd=server (not --schema from the repo root) — Prisma only
+    // reliably auto-loads server/.env (for DATABASE_URL) when it's actually
+    // running from that directory; pointing at the schema via --schema from
+    // the root looks equivalent but silently fails to pick up the env file,
+    // failing with "Environment variable not found: DATABASE_URL".
+    const serverDir = path.join(REPO_ROOT, "server");
+    await runStep("npx", ["prisma", "generate"], serverDir);
+    await runStep("npx", ["prisma", "migrate", "deploy"], serverDir);
 
     await runStep("npm", ["run", "build", "-w", "client"]);
     await runStep("npm", ["run", "build", "-w", "server"]);

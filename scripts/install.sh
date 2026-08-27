@@ -90,9 +90,14 @@ install_as_service() {
   # since `npm run prisma:migrate` earlier in this wizard already ran it,
   # but re-running just this function on its own (e.g. after a schema
   # change) would otherwise build against a stale client.
+  #
+  # Run with cwd=server (not --schema from the repo root) — Prisma only
+  # reliably auto-loads server/.env (for DATABASE_URL) when it's actually
+  # running from that directory; pointing at the schema via --schema from
+  # the root looks equivalent but silently fails to pick up the env file.
   echo
-  echo "> npx prisma generate"
-  npx prisma generate --schema server/prisma/schema.prisma
+  echo "> (cd server && npx prisma generate)"
+  (cd "$ROOT_DIR/server" && npx prisma generate)
 
   echo
   echo "> npm run build -w client"

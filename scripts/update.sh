@@ -64,13 +64,19 @@ npm install
 # migration that adds/changes a model (like this one) makes the build fail
 # with "property does not exist on type PrismaClient" otherwise, even
 # though the code and schema are perfectly in sync.
+#
+# Run with cwd=server (not --schema from the repo root) — Prisma only
+# reliably auto-loads server/.env (for DATABASE_URL) when it's actually
+# running from that directory. Pointing at the schema via --schema from
+# the root looks equivalent but silently fails to pick up the env file,
+# which fails these with "Environment variable not found: DATABASE_URL".
 echo
-echo "> npx prisma generate --schema server/prisma/schema.prisma"
-npx prisma generate --schema server/prisma/schema.prisma
+echo "> (cd server && npx prisma generate)"
+(cd server && npx prisma generate)
 
 echo
-echo "> npx prisma migrate deploy --schema server/prisma/schema.prisma"
-npx prisma migrate deploy --schema server/prisma/schema.prisma
+echo "> (cd server && npx prisma migrate deploy)"
+(cd server && npx prisma migrate deploy)
 
 echo
 echo "> npm run build -w client"
