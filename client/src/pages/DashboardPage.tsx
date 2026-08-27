@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { useDashboard } from "../api/dashboard";
 import { useCalendarEvents } from "../api/calendar";
 import { MyQueuePanel } from "../components/MyQueuePanel";
@@ -14,6 +14,7 @@ const DASHBOARD_SECTION_NAV_ITEMS: SectionNavItem[] = [
   { id: "section-risk-status", label: "Risk & Status" },
   { id: "section-trends", label: "Trends" },
   { id: "section-week", label: "This Week" },
+  { id: "section-flagged", label: "Flagged for Review" },
   { id: "section-needs-assessment", label: "Needs Assessment" },
 ];
 
@@ -32,6 +33,40 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+// Shared by the "Flagged for Review", "Not Started", and "In Progress"
+// lists below — same shape (id/name/businessUnit), same "+N more" pattern
+// as the count can exceed what the endpoint actually returns rows for.
+function SystemMiniList({
+  systems,
+  totalCount,
+  emptyText,
+}: {
+  systems: { id: string; name: string; businessUnit: string }[];
+  totalCount: number;
+  emptyText: string;
+}) {
+  if (systems.length === 0) {
+    return <p className="text-sm text-slate-400 dark:text-slate-500">{emptyText}</p>;
+  }
+  return (
+    <>
+      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        {systems.map((s) => (
+          <li key={s.id} className="py-2">
+            <Link to={`/systems/${s.id}`} className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:underline">
+              {s.name}
+            </Link>
+            <div className="text-xs text-slate-500 dark:text-slate-400">{s.businessUnit}</div>
+          </li>
+        ))}
+      </ul>
+      {totalCount > systems.length && (
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">+{totalCount - systems.length} more</p>
+      )}
+    </>
+  );
+}
+
 export function DashboardPage() {
   const { data, isLoading } = useDashboard();
   // Memoized so these stay referentially/value-stable across re-renders —
@@ -45,6 +80,24 @@ export function DashboardPage() {
     return { today: now, weekFromNow: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) };
   }, []);
   const { data: weekEvents } = useCalendarEvents(today, weekFromNow);
+
+  // The sidebar's quick-stat tiles link here with a #section-* hash (e.g.
+  // "/#section-flagged") so each one actually lands on its own detail
+  // instead of the plain dashboard root — React Router doesn't scroll to
+  // hash targets on its own, so this does it by hand. Also fires on a
+  // same-page hash change (clicking a different tile while already here),
+  // not just on mount, since `location` changes even without a remount.
+  const location = useLocation();
+  const hasData = !!data;
+  useEffect(() => {
+    // Skipped while still loading — the target section hasn't rendered yet,
+    // so there'd be nothing in the DOM to scroll to. Depends on `hasData`
+    // (a boolean), not `data` itself — `data` gets a new object reference
+    // on every 15s background refetch, which would otherwise re-fire this
+    // and yank the viewer back to the hash target repeatedly.
+    if (!location.hash || isLoading || !hasData) return;
+    document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [location.hash, isLoading, hasData]);
 
   if (isLoading || !data) {
     return <p className="text-slate-500 dark:text-slate-400">Loading dashboard...</p>;
@@ -63,7 +116,7 @@ export function DashboardPage() {
 
       <div id="section-overview" className="grid grid-cols-2 gap-4 sm:grid-cols-4 scroll-mt-16">
         <StatCard label="Total AI Use Cases" value={data.totalSystems} />
-        <StatCard label="Awaiting Risk Assessment" value={data.needsAssessmentCount} />
+        <StatCard label="Awaiting Risk Assessment" value={data.notStartedCount + data.inProgressCount} />
         <StatCard label="Flagged for Review" value={data.reviewTriggeredCount} />
         <StatCard label="Events This Week" value={weekEvents?.length ?? 0} />
       </div>
@@ -135,27 +188,26 @@ export function DashboardPage() {
         )}
       </div>
 
-      <div id="section-needs-assessment" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-16">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Needs a Risk Assessment</h2>
-        {data.needsAssessment.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Everything registered has an assessment.</p>
-        ) : (
-          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-            {data.needsAssessment.map((s) => (
-              <li key={s.id} className="py-2">
-                <Link to={`/systems/${s.id}`} className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:underline">
-                  {s.name}
-                </Link>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{s.businessUnit}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {data.needsAssessmentCount > data.needsAssessment.length && (
-          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-            +{data.needsAssessmentCount - data.needsAssessment.length} more
-          </p>
-        )}
+      <div id="section-flagged" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-16">
+        <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Flagged for Review</h2>
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+          Systems whose intake questionnaire triggered a mandatory additional review (Dimension 1).
+        </p>
+        <SystemMiniList systems={data.flagged} totalCount={data.reviewTriggeredCount} emptyText="Nothing is currently flagged." />
+      </div>
+
+      <div id="section-needs-assessment" className="grid gap-6 lg:grid-cols-2 scroll-mt-16">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Not Started</h2>
+          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Registered, but no risk assessment has been started yet.</p>
+          <SystemMiniList systems={data.notStarted} totalCount={data.notStartedCount} emptyText="Everything registered has at least a draft assessment." />
+        </div>
+
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">In Progress</h2>
+          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">A draft assessment exists but hasn't been finalized yet.</p>
+          <SystemMiniList systems={data.inProgress} totalCount={data.inProgressCount} emptyText="No draft assessments in progress." />
+        </div>
       </div>
     </div>
   );

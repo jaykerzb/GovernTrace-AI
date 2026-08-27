@@ -241,9 +241,14 @@ export interface DashboardData {
   totalSystems: number;
   byStatus: Record<string, number>;
   byRiskRating: Record<string, number>;
-  needsAssessmentCount: number;
-  needsAssessment: { id: string; name: string; status: SystemStatus; businessUnit: string }[];
+  // "Awaiting Assessment" split into two non-overlapping states: never
+  // started vs. a draft assessment already underway but not finalized.
+  notStartedCount: number;
+  notStarted: { id: string; name: string; status: SystemStatus; businessUnit: string }[];
+  inProgressCount: number;
+  inProgress: { id: string; name: string; status: SystemStatus; businessUnit: string }[];
   reviewTriggeredCount: number;
+  flagged: { id: string; name: string; status: SystemStatus; businessUnit: string }[];
   trends: { month: string; registrations: number; avgRiskScore: number | null }[];
 }
 

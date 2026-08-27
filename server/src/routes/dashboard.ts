@@ -34,13 +34,28 @@ dashboardRouter.get("/dashboard", async (_req, res) => {
   const months = lastMonths(TREND_MONTHS);
   const rangeStart = months[0].start;
 
+  // "Awaiting Assessment" used to be one bucket (currentApprovalAuthority
+  // null) that blurred together two very different situations — a system
+  // that's never had an assessment started, and one with a draft assessment
+  // already in progress (which also shows up in that owner's My Queue).
+  // Splitting them removes that overlap and tells the viewer which of the
+  // two is actually true. A FINALIZED assessment always sets
+  // currentApprovalAuthority (see the finalize route), so "null" here can
+  // only mean "no assessments at all" or "only draft ones" — the two
+  // conditions below are a true partition, not an approximation.
+  const notStartedWhere = { riskAssessments: { none: {} } } as const;
+  const inProgressWhere = { currentApprovalAuthority: null, riskAssessments: { some: { status: "DRAFT" as const } } };
+
   const [
     byStatus,
     systemsWithRatings,
     totalSystems,
-    needsAssessmentCount,
-    needsAssessment,
+    notStartedCount,
+    notStarted,
+    inProgressCount,
+    inProgress,
     reviewTriggeredCount,
+    flagged,
     recentSystems,
     finalizedAssessments,
   ] = await Promise.all([
@@ -49,13 +64,16 @@ dashboardRouter.get("/dashboard", async (_req, res) => {
       select: { id: true, workPapers: { select: { compositeRiskRating: true } } },
     }),
     prisma.aiSystem.count(),
-    prisma.aiSystem.count({ where: { currentApprovalAuthority: null } }),
+    prisma.aiSystem.count({ where: notStartedWhere }),
+    prisma.aiSystem.findMany({ where: notStartedWhere, select: { id: true, name: true, status: true, businessUnit: true }, take: 10 }),
+    prisma.aiSystem.count({ where: inProgressWhere }),
+    prisma.aiSystem.findMany({ where: inProgressWhere, select: { id: true, name: true, status: true, businessUnit: true }, take: 10 }),
+    prisma.aiSystem.count({ where: { currentReviewTriggered: true } }),
     prisma.aiSystem.findMany({
-      where: { currentApprovalAuthority: null },
+      where: { currentReviewTriggered: true },
       select: { id: true, name: true, status: true, businessUnit: true },
       take: 10,
     }),
-    prisma.aiSystem.count({ where: { currentReviewTriggered: true } }),
     prisma.aiSystem.findMany({ where: { createdAt: { gte: rangeStart } }, select: { createdAt: true } }),
     prisma.riskAssessment.findMany({
       where: { status: "FINALIZED", finalizedAt: { gte: rangeStart } },
@@ -94,9 +112,12 @@ dashboardRouter.get("/dashboard", async (_req, res) => {
     totalSystems,
     byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
     byRiskRating,
-    needsAssessmentCount,
-    needsAssessment,
+    notStartedCount,
+    notStarted,
+    inProgressCount,
+    inProgress,
     reviewTriggeredCount,
+    flagged,
     trends,
   });
 });
