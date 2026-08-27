@@ -2,6 +2,8 @@
 
 No Docker, no Coolify — just the app running directly as a systemd service, kept up to date either from the CLI (`scripts/update.sh`) or from the app itself (**Admin → System**).
 
+**The easy way:** `scripts/install.sh` does everything below automatically if you answer yes to its "set this up as a persistent background service" prompt — production build, systemd unit, and the sudoers rule in one step (it'll prompt for your password once, same as any of these commands would). The manual steps below are for reference, or for setting it up separately from the rest of the install wizard.
+
 ## 1. Install the systemd service
 
 ```bash
@@ -25,7 +27,7 @@ Create `/etc/sudoers.d/governtrace-ai` (using `visudo -f` so a syntax error can'
 sudo visudo -f /etc/sudoers.d/governtrace-ai
 ```
 
-Add this line, replacing `governtrace` with whatever `User=` you set in the service file:
+Add this line, replacing `governtrace` with whatever `User=` you set in the service file. Use `command -v systemctl` to get the exact path on your distro (sudoers rules match on the literal resolved path, and it isn't always `/usr/bin/systemctl`):
 
 ```
 governtrace ALL=(root) NOPASSWD: /usr/bin/systemctl restart governtrace-ai

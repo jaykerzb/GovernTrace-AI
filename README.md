@@ -20,6 +20,7 @@
 - [Features](#features)
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
+- [Deploying on a Linux VM](#deploying-on-a-linux-vm)
 - [The governance workflow](#the-governance-workflow)
 - [Admin panel](#admin-panel)
 - [Project structure](#project-structure)
@@ -105,7 +106,7 @@ npm run setup
 
 This one command does everything: installs all dependencies, creates `server/.env` with a freshly generated JWT secret (if it doesn't already exist), applies the database schema, and seeds the 5 demo accounts below. Safe to re-run — it won't overwrite an existing `.env` or duplicate accounts.
 
-On Linux, `bash scripts/install.sh` does the same thing interactively — it additionally asks whether to populate the registry with sample AI use cases (see step 4 below) instead of leaving it empty, so you don't need to run that as a separate step afterward.
+On Linux, `bash scripts/install.sh` does the same thing interactively — it additionally asks whether to populate the registry with sample AI use cases (see step 4 below) instead of leaving it empty, and whether to set the app up as a persistent systemd service (see [Deploying on a Linux VM](#deploying-on-a-linux-vm)) instead of just running it with `npm run dev`.
 
 ### 3. Start the app
 
@@ -141,7 +142,7 @@ Run this *after* step 2 (it looks up the seeded Admin account to assign as owner
 
 ## Deploying on a Linux VM
 
-For a standing deployment (rather than local dev), `deploy/governtrace-ai.service` is a systemd unit that runs the app as a persistent background service — the compiled server serves the built client itself, so it's a single process. See `deploy/README.md` for the full install steps, including the sudo rule needed for self-restart.
+For a standing deployment (rather than local dev), the app runs as a systemd service — the compiled server serves the built client itself, so it's a single process. `scripts/install.sh` sets this up for you automatically (production build, systemd unit, and the scoped sudo rule needed for self-restart, all in one prompt); see `deploy/README.md` if you'd rather do it manually or already ran the wizard without that step.
 
 Once it's set up, updates can be installed two ways:
 - **From the CLI:** `scripts/update.sh` checks GitHub for new commits, shows you what's new, and — if you confirm — stops the service, pulls, rebuilds, applies any new database migrations, and starts it back up.

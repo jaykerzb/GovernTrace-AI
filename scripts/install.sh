@@ -2,12 +2,16 @@
 # Interactive installation wizard for Linux. Does everything scripts/setup.js
 # does non-interactively (install deps, create server/.env, apply the schema,
 # seed the 5 demo accounts) but also asks whether to populate the registry
-# with sample AI use case data instead of leaving it empty.
+# with sample AI use case data instead of leaving it empty, and whether to
+# install the app as a persistent systemd service (production build +
+# service file + a scoped sudo rule for self-restart) instead of just
+# leaving it to be started manually with `npm run dev`.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_PATH="$ROOT_DIR/server/.env"
 ENV_EXAMPLE_PATH="$ROOT_DIR/server/.env.example"
+SERVICE_NAME="governtrace-ai"
 
 cd "$ROOT_DIR"
 
@@ -63,7 +67,110 @@ case "$REPLY" in
     ;;
 esac
 
-cat <<'EOF'
+# Builds the production bundle and installs+starts governtrace-ai as a
+# systemd service running as whichever user invoked this script — plus a
+# scoped passwordless sudo rule letting the app restart that one service
+# by itself, so Admin > System's update/network-settings buttons work
+# without any extra manual setup afterward. Bundled into this same step
+# (rather than left as separate manual instructions) because installing
+# the service itself already requires sudo — no added exposure from also
+# writing the sudoers rule here.
+install_as_service() {
+  local service_user
+  service_user="$(id -un)"
+  if [ "$service_user" = "root" ]; then
+    echo "Warning: running as root — the service would run as root too, which" >&2
+    echo "is more privileged than necessary. Consider re-running this wizard as a" >&2
+    echo "regular user (sudo will still prompt when needed) if you'd rather not." >&2
+  fi
+
+  echo
+  echo "> npm run build -w client"
+  npm run build -w client
+
+  echo
+  echo "> npm run build -w server"
+  npm run build -w server
+
+  # Mirrors what the Dockerfile and scripts/update.sh do — the compiled
+  # server (server/src/index.ts) looks for the built client at server/client.
+  rm -rf "$ROOT_DIR/server/client"
+  cp -r "$ROOT_DIR/client/dist" "$ROOT_DIR/server/client"
+
+  echo
+  echo "> npx prisma generate"
+  npx prisma generate --schema server/prisma/schema.prisma
+
+  local systemctl_path
+  systemctl_path="$(command -v systemctl)"
+
+  echo
+  echo "Installing systemd service (will prompt for your password)..."
+  sudo tee "/etc/systemd/system/$SERVICE_NAME.service" > /dev/null <<SERVICE
+[Unit]
+Description=GovernTrace AI
+After=network.target
+
+[Service]
+Type=simple
+User=$service_user
+WorkingDirectory=$ROOT_DIR/server
+ExecStart=$(command -v node) dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+  sudo systemctl daemon-reload
+
+  # Written to a temp file and validated with visudo -c before being moved
+  # into place, so a typo here can't corrupt sudo entirely.
+  local tmp_sudoers
+  tmp_sudoers="$(mktemp)"
+  echo "$service_user ALL=(root) NOPASSWD: $systemctl_path restart $SERVICE_NAME" > "$tmp_sudoers"
+  if sudo visudo -c -f "$tmp_sudoers" >/dev/null 2>&1; then
+    sudo install -o root -g root -m 0440 "$tmp_sudoers" "/etc/sudoers.d/$SERVICE_NAME"
+    echo "Configured passwordless sudo for restarting the service."
+  else
+    echo "Could not validate the sudoers rule — skipping it. Admin > System's" >&2
+    echo "auto-restart won't work until you add it manually; see deploy/README.md." >&2
+  fi
+  rm -f "$tmp_sudoers"
+
+  sudo systemctl enable --now "$SERVICE_NAME"
+  echo
+  echo "Service installed and started. Check status with:"
+  echo "  sudo systemctl status $SERVICE_NAME"
+}
+
+echo
+read -r -p "Set this up as a persistent background service (auto-starts on boot, and lets Admin > System check for and install updates)? Requires sudo. [y/N] " REPLY
+case "$REPLY" in
+  [yY]|[yY][eE][sS])
+    install_as_service
+    RAN_AS_SERVICE=1
+    ;;
+  *)
+    RAN_AS_SERVICE=0
+    ;;
+esac
+
+if [ "$RAN_AS_SERVICE" = "1" ]; then
+  PORT_VALUE="$(grep -oP '^PORT="?\K[0-9]+' "$ENV_PATH" 2>/dev/null || echo 4000)"
+  cat <<EOF
+
+Setup complete. GovernTrace AI is running at http://localhost:$PORT_VALUE
+
+Demo accounts (password: governance123):
+  Admin               admin@example.com
+  Compliance Officer  compliance@example.com
+  System Owner        owner@example.com
+  Approver            approver@example.com
+  Viewer              viewer@example.com
+EOF
+else
+  cat <<'EOF'
 
 Setup complete.
 
@@ -77,3 +184,4 @@ Demo accounts (password: governance123):
   Approver            approver@example.com
   Viewer              viewer@example.com
 EOF
+fi
