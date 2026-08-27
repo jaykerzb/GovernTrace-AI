@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { parseOffice, OfficeConverter } from "officeparser";
+import DOMPurify from "isomorphic-dompurify";
 
 const MAX_CHARS = 200_000;
 
@@ -17,11 +18,20 @@ export function isHtmlPreviewable(mimeType: string): boolean {
 
 // Converts a .docx/.pptx/.xlsx file to HTML for inline preview. Returns null
 // on failure — the caller falls back to "download to view".
+//
+// The converter's output is untrusted: it's derived from a file some user
+// uploaded, and officeparser's converter has been observed to pass certain
+// embedded markup through rather than escaping it. Without sanitizing here,
+// a crafted upload could plant a stored XSS payload that runs same-origin
+// (with the viewing user's session) the moment anyone previews it — this is
+// the one point both documents.ts and policies.ts route through, so
+// sanitizing here covers both instead of relying on each route to remember.
 export async function convertToPreviewHtml(filePath: string, mimeType: string): Promise<string | null> {
   if (!isHtmlPreviewable(mimeType)) return null;
   try {
     const { value } = await OfficeConverter.convert(filePath, "html");
-    return typeof value === "string" ? value : null;
+    if (typeof value !== "string") return null;
+    return DOMPurify.sanitize(value, { WHOLE_DOCUMENT: true });
   } catch {
     return null;
   }

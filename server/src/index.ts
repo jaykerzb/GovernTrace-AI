@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import express from "express";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth.js";
@@ -44,6 +45,21 @@ const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 // or tunnel (Cloudflare Tunnel, nginx, etc.), which terminates TLS itself
 // and forwards to this server over plain HTTP.
 app.set("trust proxy", 1);
+
+// Adds a handful of low-risk security headers — most importantly
+// X-Content-Type-Options: nosniff, which stops a browser from ignoring an
+// uploaded document's stored MIME type and rendering it as something more
+// dangerous (e.g. HTML) than what it was served as. Deliberately narrow
+// rather than helmet's full defaults:
+//   - contentSecurityPolicy: off. The office-preview HTML response (see
+//     services/textExtraction.ts) ships its own inline <style> block, and a
+//     default CSP would silently break that; the XSS surface it would guard
+//     against is already covered by server-side sanitization plus the
+//     preview iframe's own empty `sandbox` attribute.
+//   - hsts: off. This app explicitly supports plain-HTTP deployments (see
+//     COOKIE_SECURE's documented default in server/.env.example) — no
+//     reason to push browsers toward requiring HTTPS on every visit.
+app.use(helmet({ contentSecurityPolicy: false, hsts: false }));
 
 // CLIENT_ORIGIN accepts a comma-separated list so this can be reached from
 // more than one origin at once (e.g. http://localhost:5173 during local dev

@@ -73,9 +73,14 @@ export function DocumentPreviewModal({ file, onClose }: { file: PreviewableFile;
           ) : mimeType === "application/pdf" ? (
             <embed src={viewUrl} type="application/pdf" title={originalName} className="h-full w-full" />
           ) : isOfficeHtmlPreviewable && previewHtmlUrl ? (
-            <iframe src={previewHtmlUrl} title={originalName} className="h-full w-full border-0 bg-white" />
+            // sandbox="" (no allow-scripts, no allow-same-origin) — this
+            // content is a converted rendering of a user-uploaded file, so
+            // even though the server sanitizes it before serving, an empty
+            // sandbox means a gap in that sanitization still can't execute
+            // script or reach the parent page.
+            <iframe src={previewHtmlUrl} title={originalName} sandbox="" className="h-full w-full border-0 bg-white" />
           ) : previewable ? (
-            <iframe src={viewUrl} title={originalName} className="h-full w-full border-0 bg-white" />
+            <iframe src={viewUrl} title={originalName} sandbox="" className="h-full w-full border-0 bg-white" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
               <p className="text-sm text-slate-500 dark:text-slate-400">
