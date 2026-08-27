@@ -4,6 +4,7 @@ import { DonutChart } from "../components/DonutChart";
 import { HorizontalBarChart, ColumnChart } from "../components/BarChart";
 import { RISK_COLORS } from "../constants/riskColors";
 import { STATUS_LABELS } from "../components/Badges";
+import { CustomReportsSection } from "../components/CustomReportsSection";
 import type { SystemStatus } from "../api/types";
 import { inputClass } from "../lib/ui";
 
@@ -166,6 +167,8 @@ export function AnalyticsPage() {
           </div>
         )}
       </ChartCard>
+
+      <CustomReportsSection filters={filters} />
     </div>
   );
 }

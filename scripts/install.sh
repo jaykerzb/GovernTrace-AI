@@ -144,12 +144,60 @@ SERVICE
   echo "  sudo systemctl status $SERVICE_NAME"
 }
 
+# Installs a systemd timer that runs scripts/backup.sh once a day (see
+# deploy/governtrace-ai-backup.{service,timer}), keeping the last 14
+# archives by default. Only offered alongside the main service since it
+# needs the same $service_user/$ROOT_DIR already resolved there, and a
+# scheduled backup of a setup that isn't running persistently anyway isn't
+# very useful.
+install_backup_timer() {
+  local service_user="$1"
+
+  echo
+  echo "Installing daily backup timer (will prompt for your password)..."
+  sudo tee "/etc/systemd/system/$SERVICE_NAME-backup.service" > /dev/null <<BACKUPSERVICE
+[Unit]
+Description=GovernTrace AI backup
+
+[Service]
+Type=oneshot
+User=$service_user
+WorkingDirectory=$ROOT_DIR
+ExecStart=$(command -v bash) $ROOT_DIR/scripts/backup.sh
+BACKUPSERVICE
+
+  sudo tee "/etc/systemd/system/$SERVICE_NAME-backup.timer" > /dev/null <<'BACKUPTIMER'
+[Unit]
+Description=Daily GovernTrace AI backup
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+BACKUPTIMER
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now "$SERVICE_NAME-backup.timer"
+  echo "Backup timer installed — runs daily, keeping the last 14 backups under $ROOT_DIR/backups."
+  echo "Check its schedule with: systemctl list-timers $SERVICE_NAME-backup.timer"
+}
+
 echo
 read -r -p "Set this up as a persistent background service (auto-starts on boot, and lets Admin > System check for and install updates)? Requires sudo. [y/N] " REPLY
 case "$REPLY" in
   [yY]|[yY][eE][sS])
     install_as_service
     RAN_AS_SERVICE=1
+
+    echo
+    read -r -p "Also install a daily automatic backup of the database and uploaded documents? Requires sudo. [y/N] " REPLY
+    case "$REPLY" in
+      [yY]|[yY][eE][sS]) install_backup_timer "$(id -un)" ;;
+      *) ;;
+    esac
     ;;
   *)
     RAN_AS_SERVICE=0

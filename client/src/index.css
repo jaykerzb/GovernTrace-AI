@@ -13,3 +13,15 @@
 body {
   @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
 }
+
+@media print {
+  /* Browsers omit CSS background colors/images by default when printing
+     (only an explicit "background graphics" opt-in restores them) — chart
+     bars and legend swatches set their color via inline background-color,
+     not an SVG fill, so without this override every printed chart column
+     and bar renders invisible, just floating numbers and labels. */
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

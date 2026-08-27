@@ -182,6 +182,8 @@ bash scripts/restore.sh backups/governtrace-backup-<timestamp>.tar.gz
 
 It requires typing a confirmation phrase first, since it overwrites whatever's currently there.
 
+`scripts/install.sh` offers to install a daily backup timer automatically (as part of the same prompt that sets up the persistent service); to add it after the fact, or set it up manually, see `deploy/README.md`. It keeps the last 14 backups by default and prunes older ones on each run.
+
 ## The governance workflow
 
 1. **Intake** — a use case is registered through the guided wizard (Basics → Data & Deployment → Supporting Documents → Review), saving progressively so an interrupted intake can always be resumed from the system's detail page.

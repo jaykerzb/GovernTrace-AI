@@ -38,3 +38,20 @@ Without this rule, updates and network-setting changes still save/build correctl
 ## 3. PATH inside the service
 
 systemd services get a minimal `PATH` by default, which can be missing wherever `node`/`npm`/`git` actually live (especially if Node was installed via `nvm`). If the service fails to start, or updates fail with a "command not found" error, add an explicit `Environment=PATH=...` line to the `[Service]` section of the unit file pointing at the right directories, then `sudo systemctl daemon-reload`.
+
+## 4. Daily backups (optional)
+
+`scripts/install.sh` offers this automatically right after setting up the main service. To add it separately, or set it up manually:
+
+```bash
+sudo cp deploy/governtrace-ai-backup.service deploy/governtrace-ai-backup.timer /etc/systemd/system/
+```
+
+Edit `WorkingDirectory` and `User` in the `.service` file the same way as the main service file. Then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now governtrace-ai-backup.timer
+```
+
+This runs `scripts/backup.sh` once a day, writing to `backups/` in the repo root and keeping the last 14 archives (set `GOVERNTRACE_BACKUP_KEEP` in the service file's `[Service]` section as an `Environment=` line to change that). Check it's scheduled with `systemctl list-timers governtrace-ai-backup.timer`, or trigger one immediately with `sudo systemctl start governtrace-ai-backup.service`. See the main README's "Backing up and restoring" section for `scripts/restore.sh`.

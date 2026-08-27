@@ -36,6 +36,107 @@ analyticsRouter.get("/analytics/business-units", async (_req, res) => {
   res.json(rows.map((r) => r.businessUnit));
 });
 
+const RISK_SEVERITY: Record<string, number> = { Low: 1, Moderate: 2, High: 3, Critical: 4 };
+
+const CUSTOM_DIMENSIONS = ["businessUnit", "status", "aiType", "owner", "riskRating", "month"] as const;
+type CustomDimension = (typeof CUSTOM_DIMENSIONS)[number];
+
+const CUSTOM_METRICS = ["count", "avgScore"] as const;
+type CustomMetric = (typeof CUSTOM_METRICS)[number];
+
+interface CustomRow {
+  businessUnit: string;
+  status: string;
+  aiType: string;
+  owner: { name: string };
+  currentScore: number | null;
+  createdAt: Date;
+  workPapers: { compositeRiskRating: string | null }[];
+}
+
+// The worst (highest-severity) composite rating across a system's function
+// work papers — the same "risk rating" every other view in the app (the
+// dashboard, My Queue) uses, rather than re-deriving one from the risk
+// assessment score band, so a custom report's numbers match what users
+// already see elsewhere.
+function worstRiskRating(row: CustomRow): string {
+  let worst: string | null = null;
+  for (const wp of row.workPapers) {
+    if (wp.compositeRiskRating && (!worst || RISK_SEVERITY[wp.compositeRiskRating] > RISK_SEVERITY[worst])) {
+      worst = wp.compositeRiskRating;
+    }
+  }
+  return worst ?? "NOT_RATED";
+}
+
+function dimensionKey(row: CustomRow, dimension: CustomDimension): string {
+  switch (dimension) {
+    case "businessUnit":
+      return row.businessUnit;
+    case "status":
+      return row.status;
+    case "aiType":
+      return row.aiType;
+    case "owner":
+      return row.owner.name;
+    case "riskRating":
+      return worstRiskRating(row);
+    case "month":
+      return monthKey(row.createdAt);
+  }
+}
+
+// Backs the custom report builder on the Analytics page — lets a user pick
+// any dimension/metric combination instead of the fixed charts above.
+analyticsRouter.get("/analytics/custom", async (req, res) => {
+  const { dimension, metric } = req.query;
+  if (typeof dimension !== "string" || !CUSTOM_DIMENSIONS.includes(dimension as CustomDimension)) {
+    return res.status(400).json({ error: `dimension must be one of: ${CUSTOM_DIMENSIONS.join(", ")}` });
+  }
+  if (typeof metric !== "string" || !CUSTOM_METRICS.includes(metric as CustomMetric)) {
+    return res.status(400).json({ error: `metric must be one of: ${CUSTOM_METRICS.join(", ")}` });
+  }
+
+  const systemFilter = buildSystemFilter(req);
+  const rows = await prisma.aiSystem.findMany({
+    where: systemFilter,
+    select: {
+      businessUnit: true,
+      status: true,
+      aiType: true,
+      owner: { select: { name: true } },
+      currentScore: true,
+      createdAt: true,
+      workPapers: { select: { compositeRiskRating: true } },
+    },
+  });
+
+  const groups = new Map<string, CustomRow[]>();
+  for (const row of rows) {
+    const key = dimensionKey(row, dimension as CustomDimension);
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
+  }
+
+  const data = Array.from(groups, ([label, group]) => ({
+    label,
+    value:
+      metric === "count"
+        ? group.length
+        : (() => {
+            const scores = group.map((r) => r.currentScore).filter((s): s is number => s !== null);
+            return scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : 0;
+          })(),
+  }));
+
+  // Chronological, not by value, for the one dimension where reading order
+  // matters more than magnitude — everything else sorts biggest-first.
+  data.sort(dimension === "month" ? (a, b) => a.label.localeCompare(b.label) : (a, b) => b.value - a.value);
+
+  res.json({ dimension, metric, data });
+});
+
 analyticsRouter.get("/analytics", async (req, res) => {
   const systemFilter = buildSystemFilter(req);
   const hasSystemFilter = Object.keys(systemFilter).length > 0;

@@ -1,0 +1,17 @@
+# One-shot unit that runs scripts/backup.sh — triggered on a schedule by
+# governtrace-ai-backup.timer, not enabled/started directly. See
+# deploy/README.md for setup; scripts/install.sh offers to install both as
+# part of the same wizard that sets up the main app service.
+#
+# Edit WorkingDirectory/User below to match where you cloned the repo and
+# which user runs the main governtrace-ai service (needs read access to
+# server/prisma/dev.db and server/uploads).
+
+[Unit]
+Description=GovernTrace AI backup
+
+[Service]
+Type=oneshot
+User=governtrace
+WorkingDirectory=/opt/governtrace-ai
+ExecStart=/usr/bin/bash /opt/governtrace-ai/scripts/backup.sh

@@ -44,6 +44,21 @@ else
   echo "No '$SERVICE_NAME' systemd service found — skipping."
 fi
 
+if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 2>/dev/null | grep -q "^$SERVICE_NAME-backup\.timer"; then
+  echo
+  echo "> sudo systemctl disable --now $SERVICE_NAME-backup.timer"
+  sudo systemctl disable --now "$SERVICE_NAME-backup.timer" || true
+
+  echo "> removing /etc/systemd/system/$SERVICE_NAME-backup.{service,timer}"
+  sudo rm -f "/etc/systemd/system/$SERVICE_NAME-backup.service" "/etc/systemd/system/$SERVICE_NAME-backup.timer"
+
+  echo "> sudo systemctl daemon-reload"
+  sudo systemctl daemon-reload
+else
+  echo
+  echo "No '$SERVICE_NAME-backup' timer found — skipping."
+fi
+
 if [ -f "/etc/sudoers.d/$SERVICE_NAME" ]; then
   echo "> removing /etc/sudoers.d/$SERVICE_NAME"
   sudo rm -f "/etc/sudoers.d/$SERVICE_NAME"
