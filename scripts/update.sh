@@ -66,8 +66,8 @@ echo "> npm run build -w server"
 npm run build -w server
 
 # The compiled server looks for the built client at server/client (see
-# server/src/index.ts) — mirrors what the Dockerfile does at build time,
-# needed here too since there's no separate build stage on a bare VM.
+# server/src/index.ts) — there's no separate build stage on a bare VM, so
+# it has to be copied into place explicitly here.
 rm -rf server/client
 cp -r client/dist server/client
 

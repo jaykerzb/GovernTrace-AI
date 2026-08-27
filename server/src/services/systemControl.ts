@@ -87,8 +87,8 @@ export async function installUpdate(): Promise<UpdateInstallResult> {
     steps.push(await run("npm", ["run", "build", "-w", "client"]));
     steps.push(await run("npm", ["run", "build", "-w", "server"]));
 
-    // Mirrors what the Dockerfile does at build time — the compiled server
-    // (server/src/index.ts) looks for the built client at server/client.
+    // The compiled server (server/src/index.ts) looks for the built client
+    // at server/client — copy it into place explicitly.
     const clientDist = path.join(REPO_ROOT, "client", "dist");
     const serverClient = path.join(REPO_ROOT, "server", "client");
     await fs.rm(serverClient, { recursive: true, force: true });

@@ -92,8 +92,8 @@ install_as_service() {
   echo "> npm run build -w server"
   npm run build -w server
 
-  # Mirrors what the Dockerfile and scripts/update.sh do — the compiled
-  # server (server/src/index.ts) looks for the built client at server/client.
+  # Mirrors what scripts/update.sh does — the compiled server
+  # (server/src/index.ts) looks for the built client at server/client.
   rm -rf "$ROOT_DIR/server/client"
   cp -r "$ROOT_DIR/client/dist" "$ROOT_DIR/server/client"
 

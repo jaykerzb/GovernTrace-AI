@@ -1,6 +1,6 @@
 # Deploying on a plain Linux VM
 
-No Docker, no Coolify — just the app running directly as a systemd service, kept up to date either from the CLI (`scripts/update.sh`) or from the app itself (**Admin → System**).
+The app runs directly as a systemd service, kept up to date either from the CLI (`scripts/update.sh`) or from the app itself (**Admin → System**).
 
 **The easy way:** `scripts/install.sh` does everything below automatically if you answer yes to its "set this up as a persistent background service" prompt — production build, systemd unit, and the sudoers rule in one step (it'll prompt for your password once, same as any of these commands would). The manual steps below are for reference, or for setting it up separately from the rest of the install wizard.
 

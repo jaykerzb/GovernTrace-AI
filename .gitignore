@@ -2,7 +2,7 @@ node_modules/
 dist/
 build/
 # The built client copied here for the compiled server to serve in
-# production (see server/src/index.ts, Dockerfile, scripts/update.sh,
+# production (see server/src/index.ts, scripts/update.sh,
 # scripts/install.sh) — a build artifact, not source.
 server/client/
 .env
