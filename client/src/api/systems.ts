@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./client";
 import { removeRecentlyViewed } from "../hooks/useRecentlyViewed";
-import type { AiSystem, AiSystemDetail, AiType, SystemStatus } from "./types";
+import type { AiSystem, AiSystemDetail, AiSystemListItem, AiType, SystemStatus } from "./types";
 
 export interface SystemInput {
   useCaseId?: string | null;
@@ -43,7 +43,7 @@ export function useSystems(filters: SystemFilters = {}) {
   const qs = params.toString();
   return useQuery({
     queryKey: ["systems", filters],
-    queryFn: () => apiFetch<AiSystem[]>(`/systems${qs ? `?${qs}` : ""}`),
+    queryFn: () => apiFetch<AiSystemListItem[]>(`/systems${qs ? `?${qs}` : ""}`),
   });
 }
 

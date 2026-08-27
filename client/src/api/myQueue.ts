@@ -9,10 +9,12 @@ export interface MyQueueData {
   dueForReassessment: { id: string; name: string; nextReviewDue: string }[];
 }
 
-export function useMyQueue() {
+// See useDashboard's comment — same shared-query/per-caller-interval
+// pattern, since SidebarQuickStats also renders this on every page.
+export function useMyQueue(intervalMs = 15000) {
   return useQuery({
     queryKey: ["my-queue"],
     queryFn: () => apiFetch<MyQueueData>("/my-queue"),
-    refetchInterval: 15000,
+    refetchInterval: intervalMs,
   });
 }

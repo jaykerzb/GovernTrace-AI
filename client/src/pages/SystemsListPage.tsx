@@ -14,7 +14,7 @@ import { downloadCsv } from "../lib/csv";
 import { riskBand } from "../lib/riskBand";
 import { RISK_LABELS } from "../constants/riskColors";
 import { ApiError } from "../api/client";
-import type { AiSystem, SystemStatus } from "../api/types";
+import type { AiSystemListItem, SystemStatus } from "../api/types";
 import { primaryButtonBase } from "../lib/ui";
 
 type SortKey = "name" | "businessUnit" | "aiType" | "status" | "riskScore" | "createdAt";
@@ -29,7 +29,7 @@ const SORT_COLUMNS: { key: SortKey; label: string }[] = [
   { key: "createdAt", label: "Created" },
 ];
 
-function sortValue(s: AiSystem, key: SortKey): string | number {
+function sortValue(s: AiSystemListItem, key: SortKey): string | number {
   switch (key) {
     case "name":
       return s.name.toLowerCase();

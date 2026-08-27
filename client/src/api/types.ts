@@ -31,6 +31,25 @@ export interface User {
   createdAt?: string;
 }
 
+// What GET /systems (the registry list/filter endpoint) actually returns —
+// deliberately narrower than the full AiSystem below. The list view, the
+// calendar's "link to a use case" picker, and global search only ever read
+// these fields; fetching every column (description, purpose,
+// businessJustification, customFieldValues, etc.) for every row on the
+// most frequently loaded page in the app was pure waste.
+export interface AiSystemListItem {
+  id: string;
+  name: string;
+  businessUnit: string;
+  aiType: AiType;
+  ownerId: string;
+  status: SystemStatus;
+  currentScore: number | null;
+  currentReviewTriggered: boolean | null;
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface AiSystem {
   id: string;
   useCaseId: string | null;

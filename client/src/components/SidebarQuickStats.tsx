@@ -16,9 +16,19 @@ function queueCount(data: ReturnType<typeof useMyQueue>["data"]): number {
   );
 }
 
+// This renders on every authenticated page (it's part of the sidebar, not
+// the Dashboard itself), so it polls its own shared queries far less often
+// than the Dashboard page does — a summary badge doesn't need 15s freshness,
+// and without this override the two endpoints it reads would otherwise get
+// hit every 15s all day regardless of what page anyone's actually looking
+// at. React Query polls a shared query at whichever active caller's
+// interval is shortest, so visiting the Dashboard (still 15s) still keeps
+// this badge just as fresh while it's open.
+const SIDEBAR_POLL_INTERVAL_MS = 60000;
+
 export function SidebarQuickStats() {
-  const { data: dashboard } = useDashboard();
-  const { data: myQueue } = useMyQueue();
+  const { data: dashboard } = useDashboard(SIDEBAR_POLL_INTERVAL_MS);
+  const { data: myQueue } = useMyQueue(SIDEBAR_POLL_INTERVAL_MS);
 
   if (!dashboard) return null;
 

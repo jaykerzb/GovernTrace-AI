@@ -158,6 +158,13 @@ model AiSystem {
 
   meetings Meeting[]
   comments Comment[]
+
+  // businessUnit/status/ownerId are exactly what the registry list's
+  // filters, the dashboard's groupBy/count queries, and My Queue's
+  // owner-scoped lookups filter on — all hit on every page load.
+  @@index([businessUnit])
+  @@index([status])
+  @@index([ownerId])
 }
 
 model RiskAssessment {
@@ -318,6 +325,8 @@ model Document {
   // text) for full-text search — null if the type isn't supported or
   // extraction failed. Truncated to a sane cap.
   extractedText  String?
+
+  @@index([aiSystemId])
 }
 
 enum PolicyCategory {
@@ -364,6 +373,8 @@ model AuditLog {
   actor      User      @relation("Actor", fields: [actorId], references: [id])
   summary    String
   timestamp  DateTime  @default(now())
+
+  @@index([aiSystemId])
 }
 
 // Singleton row (fixed id) holding this deployment's branding and
@@ -529,6 +540,8 @@ model Comment {
   body       String
   createdAt  DateTime  @default(now())
   editedAt   DateTime?
+
+  @@index([aiSystemId])
 }
 
 // Singleton row (fixed id) holding this deployment's email delivery

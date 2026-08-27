@@ -126,6 +126,13 @@ systemsRouter.get("/", async (req, res) => {
 
   await sweepAbandonedDrafts();
 
+  // Narrowed to exactly what the list view, the calendar's use-case picker,
+  // and global search actually render — this is the most frequently loaded
+  // endpoint in the app, and it was previously returning every column
+  // (description, purpose, businessJustification, customFieldValues, the
+  // full owner relation, etc.) for every row regardless of how many of them
+  // any caller used. GET /systems/:id still returns the full record for the
+  // detail page, which is where all of that actually gets read.
   const systems = await prisma.aiSystem.findMany({
     where: {
       status: status ? (status as any) : undefined,
@@ -135,7 +142,18 @@ systemsRouter.get("/", async (req, res) => {
       businessUnit: businessUnit ? { contains: businessUnit } : undefined,
       name: q ? { contains: q } : undefined,
     },
-    include: { owner: { select: { id: true, name: true, email: true } } },
+    select: {
+      id: true,
+      name: true,
+      businessUnit: true,
+      aiType: true,
+      ownerId: true,
+      status: true,
+      currentScore: true,
+      currentReviewTriggered: true,
+      notes: true,
+      createdAt: true,
+    },
     orderBy: { updatedAt: "desc" },
   });
   res.json(systems);
@@ -219,8 +237,11 @@ systemsRouter.patch("/bulk", requirePermission("BULK_MANAGE_SYSTEMS"), async (re
 
   await prisma.$transaction(systems.map((s) => prisma.aiSystem.update({ where: { id: s.id }, data })));
 
-  for (const s of systems) {
-    await logAudit({
+  // One batched insert instead of N sequential round-trips — same audit
+  // history, just not a query-per-row on the hot path of a bulk action
+  // that's specifically meant to be fast for a large selection.
+  await prisma.auditLog.createMany({
+    data: systems.map((s) => ({
       entityType: "AiSystem",
       entityId: s.id,
       aiSystemId: s.id,
@@ -229,8 +250,8 @@ systemsRouter.patch("/bulk", requirePermission("BULK_MANAGE_SYSTEMS"), async (re
       summary: `Bulk update on "${s.name}"${data.ownerId ? ` (owner reassigned)` : ""}${
         data.status ? ` (status changed to ${data.status})` : ""
       }${data.businessUnit ? ` (business unit changed to ${data.businessUnit})` : ""}.`,
-    });
-  }
+    })),
+  });
 
   res.json({ updated: systems.length });
 });
@@ -242,17 +263,25 @@ systemsRouter.delete("/bulk", requirePermission("BULK_MANAGE_SYSTEMS"), async (r
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   const systems = await prisma.aiSystem.findMany({ where: { id: { in: parsed.data.ids } } });
+  // Each cascade is its own multi-table transaction plus a filesystem
+  // removal, so these stay sequential rather than Promise.all'd — SQLite
+  // only ever executes one write at a time anyway, and interleaving several
+  // independent cascades wouldn't be faster, just riskier to reason about.
+  // The audit entries don't share that constraint, so those still batch
+  // into one insert after the loop instead of one per row inside it.
   for (const s of systems) {
     await cascadeDeleteSystem(s.id);
-    await logAudit({
+  }
+  await prisma.auditLog.createMany({
+    data: systems.map((s) => ({
       entityType: "AiSystem",
       entityId: s.id,
       aiSystemId: null,
       action: "SYSTEM_DELETED",
       actorId: req.user!.userId,
       summary: `Deleted AI use case "${s.name}" and all its associated records (bulk delete).`,
-    });
-  }
+    })),
+  });
 
   res.json({ deleted: systems.length });
 });
