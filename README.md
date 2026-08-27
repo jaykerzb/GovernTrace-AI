@@ -158,6 +158,8 @@ Once it's set up, updates can be installed two ways:
 - **From the CLI:** `scripts/update.sh` checks GitHub for new commits, shows you what's new, and — if you confirm — stops the service, pulls, rebuilds, applies any new database migrations, and starts it back up.
 - **From the app itself:** Admin → System does the same thing with a button, and also lets an Admin edit the port, CORS allowed origins, and cookie security flag without SSHing in.
 
+To remove everything (the service, its sudoers rule, and the repository itself — **including the database and every uploaded document**), run `bash scripts/uninstall.sh`. It requires typing a confirmation phrase before doing anything, since this is irreversible.
+
 ## The governance workflow
 
 1. **Intake** — a use case is registered through the guided wizard (Basics → Data & Deployment → Supporting Documents → Review), saving progressively so an interrupted intake can always be resumed from the system's detail page.
