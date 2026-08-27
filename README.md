@@ -91,8 +91,8 @@ It's built to be adapted: the risk questions, review functions, AI type taxonomy
 Clone it with git:
 
 ```bash
-git clone https://github.com/jaykerzb/governtrace-ai.git
-cd governtrace-ai
+git clone https://github.com/jaykerzb/GovernTrace-AI.git
+cd GovernTrace-AI
 ```
 
 (No git installed, or don't want to use it? Use GitHub's **Code → Download ZIP** button on the repo page instead, then extract it and open a terminal in that folder.)
