@@ -32,6 +32,16 @@ export function HorizontalBarChart({ data }: { data: Bar[] }) {
 export function ColumnChart({ data, color }: { data: { label: string; value: number }[]; color: string }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const height = 120;
+  // Fixed-height slots (not natural text flow) for the value number and the
+  // category label, so every column's total height is exactly
+  // NUMBER_SLOT + gap + bar + gap + LABEL_SLOT regardless of digit count —
+  // a previous version reserved only 24px total for both, which was too
+  // little; the tallest bar's own column then exceeded the row's fixed
+  // height and, combined with items-end bottom alignment, had its number
+  // pushed above the box and clipped instead of scrolled into view.
+  const NUMBER_SLOT = 16;
+  const LABEL_SLOT = 14;
+  const GAP = 4;
 
   return (
     // min-w on each column plus its own horizontal scroll — with a handful
@@ -39,18 +49,30 @@ export function ColumnChart({ data, color }: { data: { label: string; value: num
     // grouped by something with a dozen+ categories scrolls instead of
     // squeezing every column and label past the point of reading.
     <div className="overflow-x-auto">
-      <div className="flex items-end gap-2" style={{ height: height + 24, minWidth: data.length * 52 }}>
+      <div
+        className="flex items-end gap-2"
+        style={{ height: NUMBER_SLOT + GAP + height + GAP + LABEL_SLOT, minWidth: data.length * 52 }}
+      >
         {data.map((d) => {
           const barHeight = Math.max((d.value / max) * height, d.value > 0 ? 4 : 0);
           return (
-            <div key={d.label} className="flex min-w-[44px] flex-1 flex-col items-center gap-1">
-              <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200">{d.value > 0 ? d.value : ""}</span>
+            <div key={d.label} className="flex min-w-[44px] flex-1 flex-col items-center" style={{ gap: GAP }}>
+              <span
+                className="flex w-full items-end justify-center text-[11px] font-medium text-slate-700 dark:text-slate-200"
+                style={{ height: NUMBER_SLOT }}
+              >
+                {d.value > 0 ? d.value : ""}
+              </span>
               <div
-                className="w-full rounded-t-sm"
+                className="w-full shrink-0 rounded-t-sm"
                 style={{ height: barHeight, backgroundColor: color, minHeight: d.value > 0 ? 4 : 1 }}
                 title={`${d.label}: ${d.value}`}
               />
-              <span className="w-full truncate text-center text-[10px] text-slate-400 dark:text-slate-500" title={d.label}>
+              <span
+                className="w-full truncate text-center text-[10px] leading-none text-slate-400 dark:text-slate-500"
+                style={{ height: LABEL_SLOT }}
+                title={d.label}
+              >
                 {d.label}
               </span>
             </div>
