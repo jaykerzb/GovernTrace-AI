@@ -100,13 +100,21 @@ cd GovernTrace-AI
 
 ### 2. Run the setup script
 
+**On Linux**, use the interactive wizard — it's the only command you need:
+
+```bash
+bash scripts/install.sh
+```
+
+It installs dependencies, creates `server/.env` with a freshly generated JWT secret, applies the database schema, and seeds the 5 demo accounts below — then asks you two yes/no questions: whether to also populate the registry with sample AI use cases (instead of starting from an empty one), and whether to set the app up as a persistent systemd service that survives reboots (instead of just running it manually with `npm run dev`). Answer those and you're done; skip straight to step 3 (or, if you said yes to the service, the app is already running — see [Deploying on a Linux VM](#deploying-on-a-linux-vm)).
+
+**On macOS or Windows**, or if you'd rather do it non-interactively, run:
+
 ```bash
 npm run setup
 ```
 
-This one command does everything: installs all dependencies, creates `server/.env` with a freshly generated JWT secret (if it doesn't already exist), applies the database schema, and seeds the 5 demo accounts below. Safe to re-run — it won't overwrite an existing `.env` or duplicate accounts.
-
-On Linux, `bash scripts/install.sh` does the same thing interactively — it additionally asks whether to populate the registry with sample AI use cases (see step 4 below) instead of leaving it empty, and whether to set the app up as a persistent systemd service (see [Deploying on a Linux VM](#deploying-on-a-linux-vm)) instead of just running it with `npm run dev`.
+This does the same core setup (dependencies, `.env`, schema, demo accounts) without the prompts — safe to re-run, it won't overwrite an existing `.env` or duplicate accounts. Add demo data or a persistent service afterward as their own steps (3 and below) if you want them.
 
 ### 3. Start the app
 
@@ -126,9 +134,11 @@ Runs the server (`:4000`) and client (`:5173`) together. Open **http://localhost
 
 Every one of these defaults is itself editable from **Admin → Roles** once you're logged in.
 
+(Already ran `scripts/install.sh` and said yes to the persistent-service prompt? The app is already running — this step is only for the `npm run setup` / manual path.)
+
 ### 4. (Optional) Add demo data
 
-The registry starts empty — just the 5 accounts, no AI use cases. If you'd rather see the app populated than start from a blank slate, seed ~15 sample use cases spanning every status and risk level, complete with risk assessments, work papers, and committee reviews:
+Skip this if you already said yes to it in `scripts/install.sh`. Otherwise, the registry starts empty — just the 5 accounts, no AI use cases. If you'd rather see the app populated than start from a blank slate, seed ~15 sample use cases spanning every status and risk level, complete with risk assessments, work papers, and committee reviews:
 
 ```bash
 npm run prisma:seed:demo -w server
