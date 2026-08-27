@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSystems, useBulkUpdateSystems, useBulkDeleteSystems } from "../api/systems";
 import { useActiveAiTypeOptions, useAiTypeLabel } from "../api/aiTypeOptions";
+import { useBusinessUnitOptions, useActiveBusinessUnitOptions } from "../api/businessUnitOptions";
 import { useUsers } from "../api/users";
 import { RiskScoreBadge, StatusBadge, STATUS_LABELS } from "../components/Badges";
 import { ArrowUpIcon, ArrowDownIcon } from "../components/Icons";
@@ -71,6 +72,11 @@ export function SystemsListPage() {
   const { data: users } = useUsers();
 
   const { data: aiTypeOptions } = useActiveAiTypeOptions();
+  // The filter needs every business unit any existing system might have
+  // (including a since-deactivated one) so it stays findable; reassigning
+  // via bulk update only offers active ones, since that's a new pick.
+  const { data: allBusinessUnitOptions } = useBusinessUnitOptions();
+  const { data: activeBusinessUnitOptions } = useActiveBusinessUnitOptions();
   const aiTypeLabel = useAiTypeLabel();
   const { data: orgSettings } = useOrgSettings();
   const riskThresholds = {
@@ -218,12 +224,14 @@ export function SystemsListPage() {
           placeholder="Search by Name..."
           className="w-56 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none"
         />
-        <input
-          value={businessUnit}
-          onChange={(e) => setBusinessUnit(e.target.value)}
-          placeholder="Business Unit..."
-          className="w-44 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-sm focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none"
-        />
+        <select value={businessUnit} onChange={(e) => setBusinessUnit(e.target.value)} className={selectClass}>
+          <option value="">All Business Units</option>
+          {allBusinessUnitOptions?.map((o) => (
+            <option key={o.id} value={o.label}>
+              {o.label}
+            </option>
+          ))}
+        </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -286,12 +294,14 @@ export function SystemsListPage() {
                   </option>
                 ))}
               </select>
-              <input
-                value={bulkBusinessUnit}
-                onChange={(e) => setBulkBusinessUnit(e.target.value)}
-                placeholder="Reassign business unit..."
-                className="w-48 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-xs focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none"
-              />
+              <select value={bulkBusinessUnit} onChange={(e) => setBulkBusinessUnit(e.target.value)} className={selectClass}>
+                <option value="">Reassign business unit...</option>
+                {activeBusinessUnitOptions?.map((o) => (
+                  <option key={o.id} value={o.label}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={handleBulkApply}
                 disabled={bulkUpdate.isPending || (!bulkOwnerId && !bulkStatus && !bulkBusinessUnit)}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSystem, useUpdateSystem, type SystemInput } from "../api/systems";
 import { useUsers } from "../api/users";
 import { useActiveAiTypeOptions } from "../api/aiTypeOptions";
+import { useActiveBusinessUnitOptions } from "../api/businessUnitOptions";
 import { ApiError } from "../api/client";
 import type { AiType } from "../api/types";
 import { primaryButtonBase, inputClass } from "../lib/ui";
@@ -36,6 +37,7 @@ export function SystemFormPage() {
   const navigate = useNavigate();
   const { data: users } = useUsers();
   const { data: aiTypeOptions } = useActiveAiTypeOptions();
+  const { data: businessUnitOptions } = useActiveBusinessUnitOptions();
   const { data: existing } = useSystem(id);
   const updateSystem = useUpdateSystem(id ?? "");
 
@@ -159,12 +161,19 @@ export function SystemFormPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Requesting Business Unit">
-            <input
-              required
-              value={form.businessUnit}
-              onChange={(e) => set("businessUnit", e.target.value)}
-              className={inputClass}
-            />
+            <select required value={form.businessUnit} onChange={(e) => set("businessUnit", e.target.value)} className={inputClass}>
+              <option value="">Select...</option>
+              {/* If the current value isn't an active option (e.g. it was deactivated after this
+                  system was created), it's still shown here so editing doesn't silently change it. */}
+              {form.businessUnit && !businessUnitOptions?.some((o) => o.label === form.businessUnit) && (
+                <option value={form.businessUnit}>{form.businessUnit}</option>
+              )}
+              {businessUnitOptions?.map((o) => (
+                <option key={o.id} value={o.label}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Sponsor / Product Owner" hint="Typically the business unit lead">
             <input value={form.sponsorName ?? ""} onChange={(e) => set("sponsorName", e.target.value)} className={inputClass} />

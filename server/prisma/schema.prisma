@@ -415,6 +415,21 @@ model AiTypeOption {
   createdAt  DateTime @default(now())
 }
 
+// Org-editable list of selectable business units, replacing what used to be
+// a free-text field on AiSystem. Unlike AiTypeOption, `label` itself is the
+// value stored on AiSystem.businessUnit (no separate coded key) — existing
+// free-text values written before this list existed just aren't
+// necessarily present as an option, and keep displaying as-is. Deactivated
+// rather than deleted once in use, so historical systems keep a meaningful
+// label.
+model BusinessUnitOption {
+  id        String   @id @default(cuid())
+  label     String   @unique
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 // Org-defined additional intake fields, layered onto the fixed AiSystem
 // field set. `key` is the stable identifier stored in AiSystem.customFieldValues
 // — never reused once a system has a value for it.

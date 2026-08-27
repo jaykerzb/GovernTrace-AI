@@ -6,6 +6,7 @@ import { requireAuth, requireRole, type AuthedRequest } from "../middleware/requ
 import { logAudit } from "../services/auditLog.js";
 import { wouldRemoveLastActiveAdmin } from "../services/adminGuards.js";
 import { getAiTypeOptions } from "../services/aiTypeOptions.js";
+import { getBusinessUnitOptions } from "../services/businessUnitOptions.js";
 import { getAllRiskQuestions, toWireQuestion } from "../services/riskQuestions.js";
 import { getCustomFieldDefs } from "../services/customFields.js";
 
@@ -226,6 +227,103 @@ adminRouter.delete("/ai-type-options/:id", async (req: AuthedRequest, res) => {
     action: "AI_TYPE_OPTION_DELETED",
     actorId: req.user!.userId,
     summary: `Deleted unused AI type "${existing.label}".`,
+  });
+
+  res.status(204).end();
+});
+
+// --- Business unit options --------------------------------------------------
+// Unlike AiTypeOption, there's no separate stable key here — `label` itself
+// is the exact string stored on AiSystem.businessUnit, since the field was
+// free text before this list existed and every existing value (across
+// analytics, CSV export, dashboards) already treats it as the literal
+// display string. The tradeoff: renaming a label here does NOT retroactively
+// relabel existing AI use cases (unlike AiTypeOption, where every system
+// only stores the stable key and looks the label up live) — so renaming
+// isn't exposed here, only creating, deactivating, and deleting. Renaming
+// business units on existing systems is what the registry's bulk "Reassign
+// business unit" action is for.
+
+adminRouter.get("/business-unit-options", async (_req, res) => {
+  res.json(await getBusinessUnitOptions());
+});
+
+const createBusinessUnitOptionSchema = z.object({ label: z.string().min(1) });
+
+adminRouter.post("/business-unit-options", async (req: AuthedRequest, res) => {
+  const parsed = createBusinessUnitOptionSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  await getBusinessUnitOptions(); // ensure seeding before computing sortOrder/uniqueness
+
+  const existing = await prisma.businessUnitOption.findUnique({ where: { label: parsed.data.label } });
+  if (existing) return res.status(409).json({ error: `"${parsed.data.label}" already exists.` });
+
+  const maxSortOrder = await prisma.businessUnitOption.aggregate({ _max: { sortOrder: true } });
+  const option = await prisma.businessUnitOption.create({
+    data: { label: parsed.data.label, sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1 },
+  });
+
+  await logAudit({
+    entityType: "BusinessUnitOption",
+    entityId: option.id,
+    aiSystemId: null,
+    action: "BUSINESS_UNIT_OPTION_CREATED",
+    actorId: req.user!.userId,
+    summary: `Added business unit "${option.label}".`,
+  });
+
+  res.status(201).json(option);
+});
+
+const updateBusinessUnitOptionSchema = z.object({
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+adminRouter.patch("/business-unit-options/:id", async (req: AuthedRequest, res) => {
+  const parsed = updateBusinessUnitOptionSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const existing = await prisma.businessUnitOption.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: "Not found" });
+
+  const option = await prisma.businessUnitOption.update({ where: { id: existing.id }, data: parsed.data });
+
+  await logAudit({
+    entityType: "BusinessUnitOption",
+    entityId: option.id,
+    aiSystemId: null,
+    action: "BUSINESS_UNIT_OPTION_UPDATED",
+    actorId: req.user!.userId,
+    summary: `Updated business unit "${option.label}"${
+      parsed.data.isActive === false ? " (deactivated)" : parsed.data.isActive === true ? " (reactivated)" : ""
+    }.`,
+  });
+
+  res.json(option);
+});
+
+adminRouter.delete("/business-unit-options/:id", async (req: AuthedRequest, res) => {
+  const existing = await prisma.businessUnitOption.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: "Not found" });
+
+  const inUseCount = await prisma.aiSystem.count({ where: { businessUnit: existing.label } });
+  if (inUseCount > 0) {
+    return res.status(409).json({
+      error: `${inUseCount} AI use case(s) still use "${existing.label}". Deactivate it instead of deleting.`,
+    });
+  }
+
+  await prisma.businessUnitOption.delete({ where: { id: existing.id } });
+
+  await logAudit({
+    entityType: "BusinessUnitOption",
+    entityId: existing.id,
+    aiSystemId: null,
+    action: "BUSINESS_UNIT_OPTION_DELETED",
+    actorId: req.user!.userId,
+    summary: `Deleted unused business unit "${existing.label}".`,
   });
 
   res.status(204).end();

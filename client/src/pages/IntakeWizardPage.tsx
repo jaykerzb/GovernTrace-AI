@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateSystem, useSystem, useUpdateSystem, useCompleteIntake, abandonSystem, type SystemInput } from "../api/systems";
 import { useActiveAiTypeOptions } from "../api/aiTypeOptions";
+import { useActiveBusinessUnitOptions } from "../api/businessUnitOptions";
 import { useActiveCustomFieldDefs } from "../api/customFields";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
@@ -99,6 +100,7 @@ export function IntakeWizardPage() {
   const creating = useRef(false);
 
   const { data: aiTypeOptions } = useActiveAiTypeOptions();
+  const { data: businessUnitOptions } = useActiveBusinessUnitOptions();
   const { data: customFields } = useActiveCustomFieldDefs();
   const createSystem = useCreateSystem();
   const updateSystem = useUpdateSystem(systemId ?? "");
@@ -342,11 +344,19 @@ export function IntakeWizardPage() {
             })()}
             <div className="grid grid-cols-2 gap-4">
               <Field label="Requesting Business Unit" hint="Team or department requesting this">
-                <input
-                  value={form.businessUnit}
-                  onChange={(e) => set("businessUnit", e.target.value)}
-                  className={inputClass}
-                />
+                <select value={form.businessUnit} onChange={(e) => set("businessUnit", e.target.value)} className={inputClass}>
+                  <option value="">Select...</option>
+                  {/* If the current value isn't an active option (e.g. it was deactivated after this
+                      system was created), it's still shown here so editing doesn't silently change it. */}
+                  {form.businessUnit && !businessUnitOptions?.some((o) => o.label === form.businessUnit) && (
+                    <option value={form.businessUnit}>{form.businessUnit}</option>
+                  )}
+                  {businessUnitOptions?.map((o) => (
+                    <option key={o.id} value={o.label}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <Field label="Sponsor / Product Owner" hint="Typically the business unit lead">
                 <input value={form.sponsorName} onChange={(e) => set("sponsorName", e.target.value)} className={inputClass} />
