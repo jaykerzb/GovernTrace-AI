@@ -25,13 +25,13 @@ export const SESSION_COOKIE = "ag_session";
 // Cookie attributes shared between setting the session (with maxAge) and
 // clearing it (without) — they must match on both sides or the browser
 // won't recognize a clearCookie call as targeting the same cookie.
-// `secure` defaults to on outside plain local dev: once this app is reached
-// over a real domain (a Cloudflare Tunnel, a reverse proxy, an actual
-// deployment) the browser sees an HTTPS origin and increasingly refuses to
-// even store a non-Secure cookie, so hardcoding `secure: false` would break
-// login the moment this stops being http://localhost. Override with
-// COOKIE_SECURE=false only if you're intentionally serving over plain HTTP
-// on a real domain (not recommended).
+// server/.env.example ships COOKIE_SECURE=false explicitly, since a plain
+// HTTP deployment (a bare VM on a LAN, no TLS in front of it) is the
+// common case here. The NODE_ENV fallback below only kicks in if someone
+// removes that line entirely — set COOKIE_SECURE=true once this is
+// actually reached over HTTPS (a real domain + cert, a reverse proxy, a
+// tunnel), since browsers increasingly refuse to even store a non-Secure
+// cookie from an HTTPS page, which would otherwise break login.
 const secureCookie = process.env.COOKIE_SECURE
   ? process.env.COOKIE_SECURE === "true"
   : process.env.NODE_ENV === "production";
