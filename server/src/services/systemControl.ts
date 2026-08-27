@@ -167,6 +167,36 @@ export async function installUpdate(onEvent: (event: UpdateProgressEvent) => voi
   }
 }
 
+export interface DemoDataResult {
+  success: boolean;
+  output: string;
+  error?: string;
+}
+
+// Shells out to the same npm scripts a developer would run by hand
+// (prisma:seed:demo / prisma:seed:demo:remove) rather than importing the
+// seed/remove modules directly — they're plain standalone scripts (own
+// PrismaClient, call process.exit on failure) not designed to be imported
+// into a long-running server process.
+async function runDemoDataScript(npmScript: string, onOutput: (chunk: string) => void): Promise<DemoDataResult> {
+  try {
+    const result = await runStreaming("npm", ["run", npmScript, "-w", "server"], onOutput);
+    return { success: true, output: result.output };
+  } catch (err) {
+    const partial = err && typeof err === "object" && "partialResult" in err ? (err as { partialResult: StepResult }).partialResult : undefined;
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, output: partial?.output ?? "", error: message };
+  }
+}
+
+export function seedDemoData(onOutput: (chunk: string) => void): Promise<DemoDataResult> {
+  return runDemoDataScript("prisma:seed:demo", onOutput);
+}
+
+export function removeDemoData(onOutput: (chunk: string) => void): Promise<DemoDataResult> {
+  return runDemoDataScript("prisma:seed:demo:remove", onOutput);
+}
+
 export interface NetworkSettings {
   port: number | null;
   clientOrigin: string;

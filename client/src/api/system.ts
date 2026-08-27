@@ -34,6 +34,14 @@ export interface NetworkSettingsUpdate {
   cookieSecure?: boolean;
 }
 
+export interface DemoDataResult {
+  success: boolean;
+  output: string;
+  error?: string;
+}
+
+export type DemoDataProgressEvent = { type: "output"; chunk: string };
+
 export function useSystemStatus() {
   return useQuery({
     queryKey: ["system-status"],
@@ -47,14 +55,15 @@ export function useCheckForUpdates() {
   });
 }
 
-// Not a useMutation — the response is a Server-Sent Events stream (see
-// server/src/routes/system.ts), not a single JSON body, so it needs manual
-// fetch + stream reading to call onEvent as each line of build/migration
-// output arrives instead of only finding out once everything's done.
-export async function installUpdateStreaming(onEvent: (event: UpdateProgressEvent) => void): Promise<UpdateInstallResult> {
-  const res = await fetch("/api/admin/system/updates/install", { method: "POST", credentials: "include" });
+// Shared by every admin/system endpoint that streams Server-Sent Events
+// instead of a single JSON body (see server/src/routes/system.ts) — each
+// sends progress events as they happen and a final `{type: "done", result}`
+// frame, so the caller finds out about each step instead of only learning
+// the outcome once everything's finished.
+async function streamSse<TEvent, TResult>(url: string, onEvent: (event: TEvent) => void): Promise<TResult> {
+  const res = await fetch(url, { method: "POST", credentials: "include" });
   if (!res.ok || !res.body) {
-    throw new ApiError(res.status, res.statusText || "Could not start the update.");
+    throw new ApiError(res.status, res.statusText || "Could not start.");
   }
 
   const reader = res.body.getReader();
@@ -74,12 +83,24 @@ export async function installUpdateStreaming(onEvent: (event: UpdateProgressEven
       const line = frame.split("\n").find((l) => l.startsWith("data: "));
       if (!line) continue;
       const payload = JSON.parse(line.slice("data: ".length));
-      if (payload.type === "done") return payload.result as UpdateInstallResult;
-      onEvent(payload as UpdateProgressEvent);
+      if (payload.type === "done") return payload.result as TResult;
+      onEvent(payload as TEvent);
     }
   }
 
-  throw new ApiError(500, "Update stream ended unexpectedly.");
+  throw new ApiError(500, "Stream ended unexpectedly.");
+}
+
+export function installUpdateStreaming(onEvent: (event: UpdateProgressEvent) => void): Promise<UpdateInstallResult> {
+  return streamSse("/api/admin/system/updates/install", onEvent);
+}
+
+export function seedDemoDataStreaming(onEvent: (event: DemoDataProgressEvent) => void): Promise<DemoDataResult> {
+  return streamSse("/api/admin/system/demo-data/seed", onEvent);
+}
+
+export function removeDemoDataStreaming(onEvent: (event: DemoDataProgressEvent) => void): Promise<DemoDataResult> {
+  return streamSse("/api/admin/system/demo-data/remove", onEvent);
 }
 
 export function useUpdateNetworkSettings() {

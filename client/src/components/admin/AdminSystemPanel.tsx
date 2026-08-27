@@ -3,9 +3,12 @@ import {
   useSystemStatus,
   useCheckForUpdates,
   installUpdateStreaming,
+  seedDemoDataStreaming,
+  removeDemoDataStreaming,
   useUpdateNetworkSettings,
   type UpdateCheckResult,
   type UpdateInstallResult,
+  type DemoDataResult,
 } from "../../api/system";
 import { ApiError } from "../../api/client";
 import { primaryButtonBase, inputClass } from "../../lib/ui";
@@ -190,6 +193,96 @@ function UpdatesSection() {
   );
 }
 
+function DemoDataSection() {
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [result, setResult] = useState<DemoDataResult | null>(null);
+  const [mode, setMode] = useState<"seed" | "remove" | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const logRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logLines]);
+
+  async function run(kind: "seed" | "remove") {
+    setError(null);
+    setResult(null);
+    setLogLines([]);
+    setConfirmingRemove(false);
+    setMode(kind);
+    try {
+      const streamFn = kind === "seed" ? seedDemoDataStreaming : removeDemoDataStreaming;
+      const result = await streamFn((event) => setLogLines((lines) => appendToLastChunk(lines, event.chunk)));
+      setResult(result);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `Could not ${kind === "seed" ? "add" : "remove"} demo data.`);
+    } finally {
+      setMode(null);
+    }
+  }
+
+  const busy = mode !== null;
+
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sample Data</h2>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Populate the registry with ~15 realistic AI use cases spanning every status and risk level — complete risk assessments, fully
+        answered work papers, committee decisions, and approval chains — so the Dashboard, My Queue, and Analytics have something to
+        show. Safe to re-run; it skips any use case that already exists by name. Removing it deletes exactly those sample use cases and
+        everything under them, leaving your own accounts and real use cases untouched.
+      </p>
+
+      <div className="mt-4 flex items-center gap-3">
+        <button onClick={() => run("seed")} disabled={busy} className={`${primaryButtonBase} px-4 py-2 text-sm`}>
+          {mode === "seed" ? "Adding..." : "Add Sample Data"}
+        </button>
+        {confirmingRemove ? (
+          <>
+            <span className="text-sm text-slate-600 dark:text-slate-400">Remove all sample use cases?</span>
+            <button
+              onClick={() => run("remove")}
+              disabled={busy}
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {mode === "remove" ? "Removing..." : "Confirm Remove"}
+            </button>
+            <button onClick={() => setConfirmingRemove(false)} disabled={busy} className="text-sm text-slate-500 dark:text-slate-400">
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setConfirmingRemove(true)}
+            disabled={busy}
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+          >
+            Remove Sample Data
+          </button>
+        )}
+      </div>
+
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+      {logLines.length > 0 && (
+        <div className="mt-4">
+          {result && !result.success && <p className="mb-2 text-sm text-red-600">Failed: {result.error}</p>}
+          {result && result.success && (
+            <p className="mb-2 text-sm text-emerald-600 dark:text-emerald-400">Done.</p>
+          )}
+          <pre
+            ref={logRef}
+            className="max-h-60 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-xs text-slate-600 dark:text-slate-400"
+          >
+            {logLines.join("\n")}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NetworkSection() {
   const { data: status } = useSystemStatus();
   const updateNetwork = useUpdateNetworkSettings();
@@ -295,6 +388,7 @@ export function AdminSystemPanel() {
   return (
     <div className="space-y-6">
       <UpdatesSection />
+      <DemoDataSection />
       <NetworkSection />
       <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950 p-4 text-xs text-amber-800 dark:text-amber-300">
         <strong>Restart requires sudo access.</strong> Installing an update or saving network settings both restart the server via{" "}

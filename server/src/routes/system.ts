@@ -9,6 +9,8 @@ import {
   restartService,
   getNetworkSettings,
   updateNetworkSettings,
+  seedDemoData,
+  removeDemoData,
 } from "../services/systemControl.js";
 
 // Hardcoded Admin-only, not gated through the configurable RolePermission
@@ -69,6 +71,60 @@ systemRouter.post("/system/updates/install", async (req: AuthedRequest, res) => 
     // handling the request.
     res.on("finish", restartService);
   }
+});
+
+// Server-Sent Events for the same reason as updates/install — the seed
+// script populates ~15 fully-worked-out use cases (every work paper
+// question, section, and audit entry), which takes a few seconds to a
+// minute depending on the machine.
+systemRouter.post("/system/demo-data/seed", async (req: AuthedRequest, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const send = (data: unknown) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  const result = await seedDemoData((chunk) => send({ type: "output", chunk }));
+
+  if (result.success) {
+    await logAudit({
+      entityType: "System",
+      entityId: "system",
+      aiSystemId: null,
+      action: "DEMO_DATA_SEEDED",
+      actorId: req.user!.userId,
+      summary: "Added sample AI use case demo data.",
+    });
+  }
+
+  send({ type: "done", result });
+  res.end();
+});
+
+systemRouter.post("/system/demo-data/remove", async (req: AuthedRequest, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const send = (data: unknown) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  const result = await removeDemoData((chunk) => send({ type: "output", chunk }));
+
+  if (result.success) {
+    await logAudit({
+      entityType: "System",
+      entityId: "system",
+      aiSystemId: null,
+      action: "DEMO_DATA_REMOVED",
+      actorId: req.user!.userId,
+      summary: "Removed sample AI use case demo data.",
+    });
+  }
+
+  send({ type: "done", result });
+  res.end();
 });
 
 const networkSchema = z.object({
