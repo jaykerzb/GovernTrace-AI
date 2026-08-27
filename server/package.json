@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:generate": "prisma generate",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:seed:demo": "tsx prisma/seedDemoData.ts"
+    "prisma:seed:demo": "tsx prisma/seedDemoData.ts",
+    "prisma:seed:demo:remove": "tsx prisma/removeDemoData.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

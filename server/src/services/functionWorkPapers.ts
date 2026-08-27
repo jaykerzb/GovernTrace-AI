@@ -165,11 +165,26 @@ export function matchesTriggers(
 ): boolean {
   const D = toNumber(deliveryModel);
   const T = toNumber(capabilityTier);
-  const dMatch = triggers.deliveryModels.length === 0 || (D !== null && triggers.deliveryModels.includes(D));
-  const tMatch = triggers.capabilityTiers.length === 0 || (T !== null && triggers.capabilityTiers.includes(T));
-  const rMatch = triggers.riskFactors.length === 0 || triggers.riskFactors.some((rf) => riskFactors.includes(rf));
-  if (triggers.riskFactors.length > 0) return (dMatch && tMatch) || rMatch;
-  return dMatch && tMatch;
+  const hasDTGate = triggers.deliveryModels.length > 0 || triggers.capabilityTiers.length > 0;
+  // Only meaningful when hasDTGate is true — an empty deliveryModels (or
+  // capabilityTiers) array means "no restriction on this dimension", not
+  // "matches everything", which matters below.
+  const dtMatch =
+    hasDTGate &&
+    (triggers.deliveryModels.length === 0 || (D !== null && triggers.deliveryModels.includes(D))) &&
+    (triggers.capabilityTiers.length === 0 || (T !== null && triggers.capabilityTiers.includes(T)));
+  const rMatch = triggers.riskFactors.length > 0 && triggers.riskFactors.some((rf) => riskFactors.includes(rf));
+
+  // No gates configured at all (e.g. InfoSec/MRM's shipped defaults) — in
+  // scope for every system, matching the original intent.
+  if (!hasDTGate && triggers.riskFactors.length === 0) return true;
+
+  // A function/section gated purely by risk factors (e.g. Compliance/
+  // Privacy/FIU's shipped defaults: empty D/T arrays, non-empty risk
+  // factors) must match on risk factors alone — treating the vacuously-true
+  // empty D/T check as a match here would put it in scope for every system
+  // regardless of its actual risk factors, defeating the gate entirely.
+  return dtMatch || rMatch;
 }
 
 export async function getInScopeFunctions(

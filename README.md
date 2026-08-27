@@ -146,6 +146,12 @@ npm run prisma:seed:demo -w server
 
 Run this *after* step 2 (it looks up the seeded Admin account to assign as owner). Also safe to re-run — it skips any use case that already exists by name.
 
+To remove the sample data again later (e.g. before handing the instance over for real use), leaving the 5 seeded accounts and anything else untouched:
+
+```bash
+npm run prisma:seed:demo:remove -w server
+```
+
 ### Customizing the setup
 
 `server/.env` controls the port, client origin, and other server config — `npm run setup` creates it from `server/.env.example` with a random secret already filled in; edit it afterward for anything else you need to change.
