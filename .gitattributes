@@ -1,0 +1,4 @@
+# Shell scripts must check out with LF line endings regardless of a
+# contributor's local autocrlf setting — a CRLF shebang line breaks
+# execution on Linux (the platform these scripts are meant to run on).
+*.sh text eol=lf
