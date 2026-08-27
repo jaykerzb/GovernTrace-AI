@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   useSystemStatus,
   useCheckForUpdates,
-  useInstallUpdate,
+  installUpdateStreaming,
   useUpdateNetworkSettings,
   type UpdateCheckResult,
   type UpdateInstallResult,
@@ -28,6 +28,19 @@ async function waitForReconnect(onTick: (attempt: number) => void): Promise<bool
     }
   }
   return false;
+}
+
+// Streamed output chunks don't align with line boundaries (a single chunk
+// can be a partial line, span several lines, or both), so each chunk gets
+// appended onto the last log entry until a newline forces a new one —
+// otherwise every chunk would render as its own line no matter where it
+// actually broke.
+function appendToLastChunk(lines: string[], chunk: string): string[] {
+  const parts = chunk.split("\n");
+  const result = lines.length > 0 ? [...lines] : [""];
+  result[result.length - 1] += parts[0];
+  result.push(...parts.slice(1));
+  return result;
 }
 
 type RestartPhase = { kind: "idle" } | { kind: "restarting"; attempt: number } | { kind: "reconnected" } | { kind: "timed-out" };
@@ -59,15 +72,22 @@ function RestartStatus({ phase }: { phase: RestartPhase }) {
 function UpdatesSection() {
   const { data: status } = useSystemStatus();
   const checkForUpdates = useCheckForUpdates();
-  const installUpdate = useInstallUpdate();
   const [checkResult, setCheckResult] = useState<UpdateCheckResult | null>(null);
   const [installResult, setInstallResult] = useState<UpdateInstallResult | null>(null);
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [installing, setInstalling] = useState(false);
   const [restartPhase, setRestartPhase] = useState<RestartPhase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
+  const logRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logLines]);
 
   async function handleCheck() {
     setError(null);
     setInstallResult(null);
+    setLogLines([]);
     try {
       setCheckResult(await checkForUpdates.mutateAsync());
     } catch (err) {
@@ -77,27 +97,38 @@ function UpdatesSection() {
 
   async function handleInstall() {
     setError(null);
+    setInstallResult(null);
+    setLogLines([]);
+    setInstalling(true);
     try {
-      const result = await installUpdate.mutateAsync();
+      const result = await installUpdateStreaming((event) => {
+        if (event.type === "step-start") setLogLines((lines) => [...lines, `$ ${event.command}`]);
+        else if (event.type === "step-output") setLogLines((lines) => appendToLastChunk(lines, event.chunk));
+        else if (event.type === "step-failed") setLogLines((lines) => [...lines, `✗ ${event.command} failed: ${event.error}`]);
+      });
       setInstallResult(result);
       if (result.success) {
+        setLogLines((lines) => [...lines, "", "Update installed. Restarting..."]);
         setRestartPhase({ kind: "restarting", attempt: 0 });
         const ok = await waitForReconnect((attempt) => setRestartPhase({ kind: "restarting", attempt }));
         setRestartPhase(ok ? { kind: "reconnected" } : { kind: "timed-out" });
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Update failed.");
+    } finally {
+      setInstalling(false);
     }
   }
 
-  const installing = installUpdate.isPending || restartPhase.kind === "restarting";
+  const busy = installing || restartPhase.kind === "restarting";
 
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Updates</h2>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Checks GitHub for new commits on <code>master</code>. Installing pulls the latest code, rebuilds the app, applies any new
-        database migrations, and restarts the server — this takes a minute or two, during which the app is briefly unreachable.
+        database migrations, and restarts the server — this takes a minute or two, during which the app is briefly unreachable. The log
+        below streams live as each step runs.
       </p>
 
       {status && (
@@ -109,7 +140,7 @@ function UpdatesSection() {
       <div className="mt-4 flex items-center gap-3">
         <button
           onClick={handleCheck}
-          disabled={checkForUpdates.isPending || installing}
+          disabled={checkForUpdates.isPending || busy}
           className={`${primaryButtonBase} px-4 py-2 text-sm`}
         >
           {checkForUpdates.isPending ? "Checking..." : "Check for Updates"}
@@ -118,7 +149,7 @@ function UpdatesSection() {
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
-      {checkResult && !installResult && (
+      {checkResult && logLines.length === 0 && (
         <div className="mt-4">
           {checkResult.upToDate ? (
             <p className="text-sm text-slate-600 dark:text-slate-400">Already up to date.</p>
@@ -134,23 +165,22 @@ function UpdatesSection() {
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={handleInstall}
-                disabled={installing}
-                className={`${primaryButtonBase} px-4 py-2 text-sm`}
-              >
-                {installUpdate.isPending ? "Installing..." : "Install Update"}
+              <button onClick={handleInstall} disabled={busy} className={`${primaryButtonBase} px-4 py-2 text-sm`}>
+                {installing ? "Installing..." : "Install Update"}
               </button>
             </>
           )}
         </div>
       )}
 
-      {installResult && !installResult.success && (
+      {logLines.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-sm text-red-600">Update failed: {installResult.error}</p>
-          <pre className="max-h-64 overflow-auto rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-xs text-slate-600 dark:text-slate-400">
-            {installResult.steps.map((s) => `$ ${s.command}\n${s.output}\n`).join("\n")}
+          {installResult && !installResult.success && <p className="mb-2 text-sm text-red-600">Update failed: {installResult.error}</p>}
+          <pre
+            ref={logRef}
+            className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-xs text-slate-600 dark:text-slate-400"
+          >
+            {logLines.join("\n")}
           </pre>
         </div>
       )}

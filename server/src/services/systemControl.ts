@@ -6,7 +6,7 @@
 //
 // Assumes the deployment layout documented in deploy/governtrace-ai.service:
 // this process's cwd is <repo>/server, so the repo root is one level up.
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -22,9 +22,45 @@ interface StepResult {
   output: string;
 }
 
+// `npm`/`npx` are `.cmd` shims on Windows, which spawn/execFile can't run
+// directly without a shell — irrelevant on the Linux deployment target
+// (where they're real executables on PATH) but breaks running any of this
+// on a Windows dev machine otherwise.
+const NEEDS_SHELL = process.platform === "win32";
+
 async function run(command: string, args: string[], cwd = REPO_ROOT): Promise<StepResult> {
-  const { stdout, stderr } = await execFileAsync(command, args, { cwd, timeout: 5 * 60 * 1000, maxBuffer: 10 * 1024 * 1024 });
+  const { stdout, stderr } = await execFileAsync(command, args, {
+    cwd,
+    timeout: 5 * 60 * 1000,
+    maxBuffer: 10 * 1024 * 1024,
+    shell: NEEDS_SHELL,
+  });
   return { command: [command, ...args].join(" "), output: (stdout + stderr).trim() };
+}
+
+// Like `run`, but calls `onOutput` with each chunk of stdout/stderr as it
+// arrives (via spawn, not execFile, which only ever hands back output after
+// the process has already exited) — used by installUpdate so the admin
+// panel can show the build/migration output live instead of one silent
+// multi-minute wait followed by a wall of text at the end.
+function runStreaming(command: string, args: string[], onOutput: (chunk: string) => void, cwd = REPO_ROOT): Promise<StepResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd, shell: NEEDS_SHELL });
+    let output = "";
+    const onChunk = (data: Buffer) => {
+      const text = data.toString();
+      output += text;
+      onOutput(text);
+    };
+    child.stdout.on("data", onChunk);
+    child.stderr.on("data", onChunk);
+    child.on("error", reject);
+    child.on("close", (code) => {
+      const result = { command: [command, ...args].join(" "), output: output.trim() };
+      if (code === 0) resolve(result);
+      else reject(Object.assign(new Error(`${result.command} exited with code ${code}`), { partialResult: result }));
+    });
+  });
 }
 
 export async function getCurrentCommit(): Promise<{ sha: string; message: string }> {
@@ -75,32 +111,59 @@ export function restartService(): void {
 export interface UpdateInstallResult {
   success: boolean;
   steps: StepResult[];
-  failedAt?: string;
   error?: string;
 }
 
-export async function installUpdate(): Promise<UpdateInstallResult> {
+// Emitted live as the update runs, so the admin panel can render real
+// progress instead of a single silent wait (this can take a minute or two
+// — full npm install, two builds, and a migration).
+export type UpdateProgressEvent =
+  | { type: "step-start"; command: string }
+  | { type: "step-output"; chunk: string }
+  | { type: "step-done"; command: string }
+  | { type: "step-failed"; command: string; error: string };
+
+export async function installUpdate(onEvent: (event: UpdateProgressEvent) => void): Promise<UpdateInstallResult> {
   const steps: StepResult[] = [];
+
+  async function runStep(command: string, args: string[]): Promise<void> {
+    const label = [command, ...args].join(" ");
+    onEvent({ type: "step-start", command: label });
+    try {
+      const result = await runStreaming(command, args, (chunk) => onEvent({ type: "step-output", chunk }));
+      steps.push(result);
+      onEvent({ type: "step-done", command: label });
+    } catch (err) {
+      const partial = err && typeof err === "object" && "partialResult" in err ? (err as { partialResult: StepResult }).partialResult : undefined;
+      if (partial) steps.push(partial);
+      const message = err instanceof Error ? err.message : String(err);
+      onEvent({ type: "step-failed", command: label, error: message });
+      throw err;
+    }
+  }
+
   try {
-    steps.push(await run("git", ["pull", "origin", "master"]));
-    steps.push(await run("npm", ["install"]));
-    steps.push(await run("npm", ["run", "build", "-w", "client"]));
-    steps.push(await run("npm", ["run", "build", "-w", "server"]));
+    await runStep("git", ["pull", "origin", "master"]);
+    await runStep("npm", ["install"]);
+    await runStep("npm", ["run", "build", "-w", "client"]);
+    await runStep("npm", ["run", "build", "-w", "server"]);
 
     // The compiled server (server/src/index.ts) looks for the built client
     // at server/client — copy it into place explicitly.
+    onEvent({ type: "step-start", command: "copy client build to server/client" });
     const clientDist = path.join(REPO_ROOT, "client", "dist");
     const serverClient = path.join(REPO_ROOT, "server", "client");
     await fs.rm(serverClient, { recursive: true, force: true });
     await fs.cp(clientDist, serverClient, { recursive: true });
+    onEvent({ type: "step-done", command: "copy client build to server/client" });
 
-    steps.push(await run("npx", ["prisma", "generate", "--schema", "server/prisma/schema.prisma"]));
-    steps.push(await run("npx", ["prisma", "migrate", "deploy", "--schema", "server/prisma/schema.prisma"]));
+    await runStep("npx", ["prisma", "generate", "--schema", "server/prisma/schema.prisma"]);
+    await runStep("npx", ["prisma", "migrate", "deploy", "--schema", "server/prisma/schema.prisma"]);
 
     return { success: true, steps };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { success: false, steps, failedAt: steps.length.toString(), error: message };
+    return { success: false, steps, error: message };
   }
 }
 

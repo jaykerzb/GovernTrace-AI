@@ -35,8 +35,19 @@ systemRouter.get("/system/updates", async (_req, res) => {
   }
 });
 
+// Server-Sent Events rather than a single JSON response — this can take a
+// minute or two (full npm install, two builds, a migration), and the admin
+// panel shows the output live as each line arrives instead of one silent
+// wait followed by a wall of text at the end.
 systemRouter.post("/system/updates/install", async (req: AuthedRequest, res) => {
-  const result = await installUpdate();
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const send = (data: unknown) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  const result = await installUpdate((event) => send(event));
 
   if (result.success) {
     const commit = await getCurrentCommit();
@@ -50,7 +61,9 @@ systemRouter.post("/system/updates/install", async (req: AuthedRequest, res) => 
     });
   }
 
-  res.json(result);
+  send({ type: "done", result });
+  res.end();
+
   if (result.success) {
     // Only after the response is flushed — this kills the very process
     // handling the request.

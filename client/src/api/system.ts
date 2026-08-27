@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "./client";
+import { apiFetch, ApiError } from "./client";
 
 export interface SystemStatus {
   commit: { sha: string; message: string };
@@ -22,6 +22,12 @@ export interface UpdateInstallResult {
   error?: string;
 }
 
+export type UpdateProgressEvent =
+  | { type: "step-start"; command: string }
+  | { type: "step-output"; chunk: string }
+  | { type: "step-done"; command: string }
+  | { type: "step-failed"; command: string; error: string };
+
 export interface NetworkSettingsUpdate {
   port?: number;
   clientOrigin?: string;
@@ -41,10 +47,39 @@ export function useCheckForUpdates() {
   });
 }
 
-export function useInstallUpdate() {
-  return useMutation({
-    mutationFn: () => apiFetch<UpdateInstallResult>("/admin/system/updates/install", { method: "POST" }),
-  });
+// Not a useMutation — the response is a Server-Sent Events stream (see
+// server/src/routes/system.ts), not a single JSON body, so it needs manual
+// fetch + stream reading to call onEvent as each line of build/migration
+// output arrives instead of only finding out once everything's done.
+export async function installUpdateStreaming(onEvent: (event: UpdateProgressEvent) => void): Promise<UpdateInstallResult> {
+  const res = await fetch("/api/admin/system/updates/install", { method: "POST", credentials: "include" });
+  if (!res.ok || !res.body) {
+    throw new ApiError(res.status, res.statusText || "Could not start the update.");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE frames are separated by a blank line; each starts with "data: ".
+    let frameEnd: number;
+    while ((frameEnd = buffer.indexOf("\n\n")) !== -1) {
+      const frame = buffer.slice(0, frameEnd);
+      buffer = buffer.slice(frameEnd + 2);
+      const line = frame.split("\n").find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      const payload = JSON.parse(line.slice("data: ".length));
+      if (payload.type === "done") return payload.result as UpdateInstallResult;
+      onEvent(payload as UpdateProgressEvent);
+    }
+  }
+
+  throw new ApiError(500, "Update stream ended unexpectedly.");
 }
 
 export function useUpdateNetworkSettings() {
