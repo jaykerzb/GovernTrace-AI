@@ -49,14 +49,27 @@ app.set("trust proxy", 1);
 // plus a Cloudflare Tunnel / real domain) without a code change — just add
 // the extra origin(s) to the .env value.
 const allowedOrigins = (process.env.CLIENT_ORIGIN ?? "http://localhost:5173").split(",").map((o) => o.trim());
+
+// A per-request delegate (rather than a static options object) so this can
+// compare the request's Origin against the request's own host — since the
+// compiled server serves its own frontend, a same-origin request should
+// never be blocked by a stale/missing CLIENT_ORIGIN entry, no matter what's
+// configured. Vite's built output loads as ES modules, which browsers fetch
+// in CORS mode (sending an Origin header) even for a plain
+// <script type="module">, so this isn't just an API concern — getting it
+// wrong breaks the app's own JS/CSS from loading at all.
 app.use(
-  cors({
-    origin(origin, callback) {
-      // No Origin header (curl, server-to-server, same-origin) — allow.
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`Origin ${origin} is not allowed. Add it to CLIENT_ORIGIN in server/.env.`));
-    },
-    credentials: true,
+  cors((req, callback) => {
+    const origin = req.header("Origin");
+    const selfOrigin = `${req.protocol}://${req.get("host")}`;
+    const allowed = !origin || origin === selfOrigin || allowedOrigins.includes(origin);
+    // `origin: false` (not an Error) — cors then just omits the CORS
+    // headers instead of throwing into Express's default error handler,
+    // which otherwise turns any disallowed origin into an opaque 500 for
+    // every asset/API request from that origin instead of a clean CORS
+    // block the browser itself reports.
+    if (!allowed) console.warn(`Blocked CORS request from origin: ${origin}`);
+    callback(null, { origin: allowed, credentials: true });
   })
 );
 app.use(express.json());
