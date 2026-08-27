@@ -1,0 +1,26 @@
+# systemd unit for running GovernTrace AI as a persistent background
+# service on a plain Linux VM (no Docker/Coolify) — the compiled server
+# serves the built client itself, so this is the only process needed.
+#
+# Install:
+#   sudo cp deploy/governtrace-ai.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now governtrace-ai
+#
+# Edit WorkingDirectory/User below to match where you cloned the repo and
+# which user should run it (don't run this as root).
+
+[Unit]
+Description=GovernTrace AI
+After=network.target
+
+[Service]
+Type=simple
+User=governtrace
+WorkingDirectory=/opt/governtrace-ai/server
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

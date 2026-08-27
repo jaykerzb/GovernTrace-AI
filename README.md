@@ -139,6 +139,12 @@ Run this *after* step 2 (it looks up the seeded Admin account to assign as owner
 
 `server/.env` controls the port, client origin, and other server config — `npm run setup` creates it from `server/.env.example` with a random secret already filled in; edit it afterward for anything else you need to change.
 
+## Deploying on a Linux VM
+
+For a standing deployment (rather than local dev), `deploy/governtrace-ai.service` is a systemd unit that runs the app as a persistent background service — the compiled server serves the built client itself, so it's a single process. See the comments in that file for the install steps.
+
+Once it's set up, `scripts/update.sh` checks GitHub for new commits, shows you what's new, and — if you confirm — stops the service, pulls, rebuilds, applies any new database migrations, and starts it back up.
+
 ## The governance workflow
 
 1. **Intake** — a use case is registered through the guided wizard (Basics → Data & Deployment → Supporting Documents → Review), saving progressively so an interrupted intake can always be resumed from the system's detail page.
