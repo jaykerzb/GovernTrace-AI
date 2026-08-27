@@ -86,7 +86,18 @@ It's built to be adapted: the risk questions, review functions, AI type taxonomy
 
 **Requirements:** [Node.js](https://nodejs.org) 22+ and npm (bundled with Node). Nothing else — the database is a local SQLite file, no external services required.
 
-### 1. Run the setup script
+### 1. Download the repository
+
+Clone it with git:
+
+```bash
+git clone https://github.com/jaykerzb/governtrace-ai.git
+cd governtrace-ai
+```
+
+(No git installed, or don't want to use it? Use GitHub's **Code → Download ZIP** button on the repo page instead, then extract it and open a terminal in that folder.)
+
+### 2. Run the setup script
 
 ```bash
 npm run setup
@@ -94,7 +105,7 @@ npm run setup
 
 This one command does everything: installs all dependencies, creates `server/.env` with a freshly generated JWT secret (if it doesn't already exist), applies the database schema, and seeds the 5 demo accounts below. Safe to re-run — it won't overwrite an existing `.env` or duplicate accounts.
 
-### 2. Start the app
+### 3. Start the app
 
 ```bash
 npm run dev
@@ -112,7 +123,7 @@ Runs the server (`:4000`) and client (`:5173`) together. Open **http://localhost
 
 Every one of these defaults is itself editable from **Admin → Roles** once you're logged in.
 
-### 3. (Optional) Add demo data
+### 4. (Optional) Add demo data
 
 The registry starts empty — just the 5 accounts, no AI use cases. If you'd rather see the app populated than start from a blank slate, seed ~15 sample use cases spanning every status and risk level, complete with risk assessments, work papers, and committee reviews:
 
@@ -120,7 +131,7 @@ The registry starts empty — just the 5 accounts, no AI use cases. If you'd rat
 npm run prisma:seed:demo -w server
 ```
 
-Run this *after* step 1 (it looks up the seeded Admin account to assign as owner). Also safe to re-run — it skips any use case that already exists by name.
+Run this *after* step 2 (it looks up the seeded Admin account to assign as owner). Also safe to re-run — it skips any use case that already exists by name.
 
 ### Customizing the setup
 
