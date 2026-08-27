@@ -105,6 +105,8 @@ npm run setup
 
 This one command does everything: installs all dependencies, creates `server/.env` with a freshly generated JWT secret (if it doesn't already exist), applies the database schema, and seeds the 5 demo accounts below. Safe to re-run — it won't overwrite an existing `.env` or duplicate accounts.
 
+On Linux, `bash scripts/install.sh` does the same thing interactively — it additionally asks whether to populate the registry with sample AI use cases (see step 4 below) instead of leaving it empty, so you don't need to run that as a separate step afterward.
+
 ### 3. Start the app
 
 ```bash
