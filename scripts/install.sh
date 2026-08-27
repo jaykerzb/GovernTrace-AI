@@ -84,6 +84,16 @@ install_as_service() {
     echo "regular user (sudo will still prompt when needed) if you'd rather not." >&2
   fi
 
+  # Must run before the server build, not after: `tsc` type-checks server
+  # code against whatever Prisma Client is already generated, which only
+  # reflects the schema as of the last `prisma generate` — normally fine
+  # since `npm run prisma:migrate` earlier in this wizard already ran it,
+  # but re-running just this function on its own (e.g. after a schema
+  # change) would otherwise build against a stale client.
+  echo
+  echo "> npx prisma generate"
+  npx prisma generate --schema server/prisma/schema.prisma
+
   echo
   echo "> npm run build -w client"
   npm run build -w client
@@ -96,10 +106,6 @@ install_as_service() {
   # (server/src/index.ts) looks for the built client at server/client.
   rm -rf "$ROOT_DIR/server/client"
   cp -r "$ROOT_DIR/client/dist" "$ROOT_DIR/server/client"
-
-  echo
-  echo "> npx prisma generate"
-  npx prisma generate --schema server/prisma/schema.prisma
 
   local systemctl_path
   systemctl_path="$(command -v systemctl)"

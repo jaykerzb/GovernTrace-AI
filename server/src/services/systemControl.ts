@@ -145,6 +145,17 @@ export async function installUpdate(onEvent: (event: UpdateProgressEvent) => voi
   try {
     await runStep("git", ["pull", "origin", "master"]);
     await runStep("npm", ["install"]);
+
+    // Must run before either build step, not after: `tsc` (in the server
+    // build) type-checks against whatever Prisma Client is already sitting
+    // in node_modules, which only reflects the schema as of the last
+    // `prisma generate` — not the schema.prisma just pulled above. A
+    // migration that adds/changes a model makes the build fail with
+    // "property does not exist on type PrismaClient" otherwise, even
+    // though the code and schema are perfectly in sync.
+    await runStep("npx", ["prisma", "generate", "--schema", "server/prisma/schema.prisma"]);
+    await runStep("npx", ["prisma", "migrate", "deploy", "--schema", "server/prisma/schema.prisma"]);
+
     await runStep("npm", ["run", "build", "-w", "client"]);
     await runStep("npm", ["run", "build", "-w", "server"]);
 
@@ -156,9 +167,6 @@ export async function installUpdate(onEvent: (event: UpdateProgressEvent) => voi
     await fs.rm(serverClient, { recursive: true, force: true });
     await fs.cp(clientDist, serverClient, { recursive: true });
     onEvent({ type: "step-done", command: "copy client build to server/client" });
-
-    await runStep("npx", ["prisma", "generate", "--schema", "server/prisma/schema.prisma"]);
-    await runStep("npx", ["prisma", "migrate", "deploy", "--schema", "server/prisma/schema.prisma"]);
 
     return { success: true, steps };
   } catch (err) {

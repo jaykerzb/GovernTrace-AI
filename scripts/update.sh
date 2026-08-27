@@ -57,6 +57,21 @@ echo
 echo "> npm install"
 npm install
 
+# Must run before either build step, not after: `tsc` (in `npm run build -w
+# server`) type-checks server code against whatever Prisma Client is
+# already sitting in node_modules, which only reflects the schema as of
+# the last `prisma generate` — not the schema.prisma just pulled above. A
+# migration that adds/changes a model (like this one) makes the build fail
+# with "property does not exist on type PrismaClient" otherwise, even
+# though the code and schema are perfectly in sync.
+echo
+echo "> npx prisma generate --schema server/prisma/schema.prisma"
+npx prisma generate --schema server/prisma/schema.prisma
+
+echo
+echo "> npx prisma migrate deploy --schema server/prisma/schema.prisma"
+npx prisma migrate deploy --schema server/prisma/schema.prisma
+
 echo
 echo "> npm run build -w client"
 npm run build -w client
@@ -70,14 +85,6 @@ npm run build -w server
 # it has to be copied into place explicitly here.
 rm -rf server/client
 cp -r client/dist server/client
-
-echo
-echo "> npx prisma generate --schema server/prisma/schema.prisma"
-npx prisma generate --schema server/prisma/schema.prisma
-
-echo
-echo "> npx prisma migrate deploy --schema server/prisma/schema.prisma"
-npx prisma migrate deploy --schema server/prisma/schema.prisma
 
 echo
 echo "> sudo systemctl start $SERVICE_NAME"
