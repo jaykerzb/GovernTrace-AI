@@ -200,20 +200,22 @@ const bulkUpdateSchema = z.object({
   ids: z.array(z.string().min(1)).min(1),
   ownerId: z.string().min(1).optional(),
   status: z.enum(SYSTEM_STATUSES).optional(),
+  businessUnit: z.string().min(1).optional(),
 });
 
 // Bulk routes are registered before "/:id" so "bulk" is never captured as an id param.
 systemsRouter.patch("/bulk", requirePermission("BULK_MANAGE_SYSTEMS"), async (req: AuthedRequest, res) => {
   const parsed = bulkUpdateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  if (!parsed.data.ownerId && !parsed.data.status) {
+  if (!parsed.data.ownerId && !parsed.data.status && !parsed.data.businessUnit) {
     return res.status(400).json({ error: "Nothing to update." });
   }
 
   const systems = await prisma.aiSystem.findMany({ where: { id: { in: parsed.data.ids } } });
-  const data: { ownerId?: string; status?: (typeof SYSTEM_STATUSES)[number] } = {};
+  const data: { ownerId?: string; status?: (typeof SYSTEM_STATUSES)[number]; businessUnit?: string } = {};
   if (parsed.data.ownerId) data.ownerId = parsed.data.ownerId;
   if (parsed.data.status) data.status = parsed.data.status;
+  if (parsed.data.businessUnit) data.businessUnit = parsed.data.businessUnit;
 
   await prisma.$transaction(systems.map((s) => prisma.aiSystem.update({ where: { id: s.id }, data })));
 
@@ -226,7 +228,7 @@ systemsRouter.patch("/bulk", requirePermission("BULK_MANAGE_SYSTEMS"), async (re
       actorId: req.user!.userId,
       summary: `Bulk update on "${s.name}"${data.ownerId ? ` (owner reassigned)` : ""}${
         data.status ? ` (status changed to ${data.status})` : ""
-      }.`,
+      }${data.businessUnit ? ` (business unit changed to ${data.businessUnit})` : ""}.`,
     });
   }
 

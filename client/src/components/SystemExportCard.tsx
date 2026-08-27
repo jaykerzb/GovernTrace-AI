@@ -1,14 +1,22 @@
 import { Link } from "react-router-dom";
 import { useSystem } from "../api/systems";
-import { useWorkPapers } from "../api/workPapers";
+import { useWorkPapers, useWorkPaper } from "../api/workPapers";
 import { useCommitteeReview } from "../api/committeeReview";
 import { useDocuments } from "../api/documents";
 import { useAiTypeLabel } from "../api/aiTypeOptions";
 import { useCustomFieldDefs } from "../api/customFields";
 import { useOrgSettings } from "../api/orgSettings";
+import { useApprovalSteps } from "../api/approvalSteps";
 import { ReviewTriggerBadge, StatusBadge, WorkPaperStatusBadge } from "./Badges";
 import { riskBand } from "../lib/riskBand";
 import { RISK_LABELS } from "../constants/riskColors";
+import type { FunctionWorkPaper } from "../api/types";
+
+const STEP_TYPE_LABELS: Record<string, string> = {
+  AIGA_APPROVAL: "Approval",
+  AISC_REVIEW: "Review",
+  AISC_FINAL_APPROVAL: "Final Approval",
+};
 
 const DISPOSITION_LABELS: Record<string, string> = {
   APPROVED: "Approved",
@@ -20,7 +28,10 @@ const DISPOSITION_LABELS: Record<string, string> = {
 
 // The single-system "governance record" card — the printable content shown
 // on SystemExportPage, and reused once per system on BulkExportPage.
-export function SystemExportCard({ systemId }: { systemId: string }) {
+// `includeFullWorkPapers` swaps the summary-only work paper table for every
+// question, answer, evidence note, and section synthesis — the full record
+// an auditor would expect, at the cost of a much longer document.
+export function SystemExportCard({ systemId, includeFullWorkPapers = false }: { systemId: string; includeFullWorkPapers?: boolean }) {
   const { data: system } = useSystem(systemId);
   const aiTypeLabel = useAiTypeLabel();
   const { data: orgSettings } = useOrgSettings();
@@ -33,6 +44,7 @@ export function SystemExportCard({ systemId }: { systemId: string }) {
   const { data: workPapers } = useWorkPapers(systemId);
   const { data: committeeReview } = useCommitteeReview(systemId);
   const { data: documents } = useDocuments(systemId);
+  const { data: approvalSteps } = useApprovalSteps(systemId);
 
   if (!system) {
     return <p className="text-slate-500 dark:text-slate-400">Loading export...</p>;
@@ -162,6 +174,8 @@ export function SystemExportCard({ systemId }: { systemId: string }) {
         )}
       </Section>
 
+      {includeFullWorkPapers && (workPapers ?? []).map((wp) => <WorkPaperFullDetail key={wp.id} workPaper={wp} />)}
+
       <Section title="Committee Decision">
         {committeeReview?.status === "FINALIZED" ? (
           <div className="space-y-2 text-sm">
@@ -179,6 +193,33 @@ export function SystemExportCard({ systemId }: { systemId: string }) {
         )}
       </Section>
 
+      <Section title="Approval Chain">
+        {!approvalSteps || approvalSteps.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">No approval chain has been created for this system.</p>
+        ) : (
+          <ol className="space-y-1.5 text-sm">
+            {approvalSteps.map((step) => (
+              <li key={step.id} className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-1.5 last:border-0">
+                <span className="text-slate-700 dark:text-slate-300">
+                  {STEP_TYPE_LABELS[step.stepType] ?? step.stepType.replace(/_/g, " ")}{" "}
+                  <span className="text-xs text-slate-400 dark:text-slate-500">({step.requiredRole.replace("_", " ")})</span>
+                </span>
+                <span className="text-right text-xs text-slate-500 dark:text-slate-400">
+                  {step.status.charAt(0) + step.status.slice(1).toLowerCase()}
+                  {step.status !== "PENDING" && (
+                    <>
+                      {" — "}
+                      {step.approver?.name ?? "—"}
+                      {step.actedAt ? ` · ${new Date(step.actedAt).toLocaleDateString()}` : ""}
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Section>
+
       <Section title="Supporting Documents">
         {!documents || documents.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">No supporting documents uploaded.</p>
@@ -193,6 +234,84 @@ export function SystemExportCard({ systemId }: { systemId: string }) {
         )}
       </Section>
     </div>
+  );
+}
+
+// Every question, answer, and evidence note for one work paper, plus each
+// section's findings/risks/controls/actions and rating — the level of
+// detail an auditor reviewing the packet would expect, not just the
+// composite-rating summary shown in the table above.
+function WorkPaperFullDetail({ workPaper }: { workPaper: FunctionWorkPaper }) {
+  const { data: detail } = useWorkPaper(workPaper.id);
+
+  if (!detail) return null;
+
+  const answers = (() => {
+    try {
+      return JSON.parse(detail.answers || "{}") as Record<string, string>;
+    } catch {
+      return {};
+    }
+  })();
+  const questionNotes = (() => {
+    try {
+      return JSON.parse(detail.questionNotes || "{}") as Record<string, string>;
+    } catch {
+      return {};
+    }
+  })();
+  const sectionData = (() => {
+    try {
+      return JSON.parse(detail.sectionData || "{}") as Record<string, { findings?: string; identifiedRisks?: string; mitigatingControls?: string; requiredActions?: string; riskRating?: string }>;
+    } catch {
+      return {};
+    }
+  })();
+
+  return (
+    <Section title={`${detail.label} Work Paper — Detail`}>
+      {detail.sections.length === 0 ? (
+        <p className="text-sm text-slate-400 dark:text-slate-500">No sections were in scope for this work paper.</p>
+      ) : (
+        <div className="space-y-4">
+          {detail.sections.map((section) => {
+            const sd = sectionData[section.id] ?? {};
+            return (
+              <div key={section.id} className="print:break-inside-avoid">
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{section.title}</h3>
+                <div className="mt-1.5 space-y-2">
+                  {section.questions.map((q, i) => (
+                    <div key={q.id} className="text-sm">
+                      <p className="text-slate-700 dark:text-slate-300">
+                        {i + 1}. {q.text} — <span className="font-medium">{answers[q.id] ?? "Unanswered"}</span>
+                      </p>
+                      {questionNotes[q.id] && <p className="text-xs text-slate-500 dark:text-slate-400">{questionNotes[q.id]}</p>}
+                    </div>
+                  ))}
+                </div>
+                <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                  <Field label="Findings" value={sd.findings || "—"} />
+                  <Field label="Identified Risks" value={sd.identifiedRisks || "—"} />
+                  <Field label="Mitigating Controls" value={sd.mitigatingControls || "—"} />
+                  <Field label="Required Actions" value={sd.requiredActions || "—"} />
+                  <Field label="Section Risk Rating" value={sd.riskRating || "Not Rated"} />
+                </dl>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-sm">
+        <Field label="Key Findings Synthesis" value={detail.keyFindings || "—"} />
+        <Field label="Rationale for Recommendation" value={detail.rationale || "—"} />
+        <Field
+          label="Reviewer"
+          value={detail.reviewerName ? `${detail.reviewerName}${detail.reviewerTitle ? `, ${detail.reviewerTitle}` : ""}` : "—"}
+        />
+        <Field label="Reviewer Date" value={detail.reviewerDate ? new Date(detail.reviewerDate).toLocaleDateString() : "—"} />
+      </dl>
+    </Section>
   );
 }
 

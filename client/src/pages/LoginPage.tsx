@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useOrgSettings } from "../api/orgSettings";
@@ -14,6 +14,26 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // The login screen always renders light, regardless of the viewer's saved
+  // theme preference — restored on unmount so the rest of the app is
+  // unaffected. A MutationObserver (not a one-shot removal) is needed
+  // because ThemeProvider's own mount effect re-applies the "dark" class
+  // right after this one on a fresh page load at /login — child effects run
+  // before parent effects, so a plain removal here loses that race.
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    root.classList.remove("dark");
+    const observer = new MutationObserver(() => {
+      if (root.classList.contains("dark")) root.classList.remove("dark");
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => {
+      observer.disconnect();
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -32,7 +52,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
         <img
           src={orgSettings?.logoUrl || "/governtrace-logo-vertical.png"}
@@ -43,12 +63,12 @@ export function LoginPage() {
               : "mx-auto mb-3 h-40 w-auto object-contain"
           }
         />
-        <h1 className="mb-1 text-center text-2xl font-semibold text-slate-900 dark:text-slate-100">{orgName}</h1>
-        <p className="mb-6 text-center text-sm text-slate-500 dark:text-slate-400">Sign in to manage your AI use case registry</p>
+        <h1 className="mb-1 text-center text-2xl font-semibold text-slate-900">{orgName}</h1>
+        <p className="mb-6 text-center text-sm text-slate-500">Sign in to manage your AI use case registry</p>
 
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
             <input
               type="email"
               required
@@ -59,7 +79,7 @@ export function LoginPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Password</label>
             <input
               type="password"
               required

@@ -61,6 +61,7 @@ export function SystemsListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkOwnerId, setBulkOwnerId] = useState("");
   const [bulkStatus, setBulkStatus] = useState<SystemStatus | "">("");
+  const [bulkBusinessUnit, setBulkBusinessUnit] = useState("");
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
@@ -166,8 +167,8 @@ export function SystemsListPage() {
 
   async function handleBulkApply() {
     setBulkError(null);
-    if (!bulkOwnerId && !bulkStatus) {
-      setBulkError("Choose an owner or a status to apply.");
+    if (!bulkOwnerId && !bulkStatus && !bulkBusinessUnit) {
+      setBulkError("Choose an owner, a status, or a business unit to apply.");
       return;
     }
     try {
@@ -175,10 +176,12 @@ export function SystemsListPage() {
         ids: Array.from(selectedIds),
         ownerId: bulkOwnerId || undefined,
         status: bulkStatus || undefined,
+        businessUnit: bulkBusinessUnit || undefined,
       });
       setSelectedIds(new Set());
       setBulkOwnerId("");
       setBulkStatus("");
+      setBulkBusinessUnit("");
     } catch (err) {
       setBulkError(err instanceof ApiError ? err.message : "Could not apply this bulk update.");
     }
@@ -283,9 +286,15 @@ export function SystemsListPage() {
                   </option>
                 ))}
               </select>
+              <input
+                value={bulkBusinessUnit}
+                onChange={(e) => setBulkBusinessUnit(e.target.value)}
+                placeholder="Reassign business unit..."
+                className="w-48 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 text-xs focus:border-slate-500 dark:focus:border-slate-400 focus:outline-none"
+              />
               <button
                 onClick={handleBulkApply}
-                disabled={bulkUpdate.isPending || (!bulkOwnerId && !bulkStatus)}
+                disabled={bulkUpdate.isPending || (!bulkOwnerId && !bulkStatus && !bulkBusinessUnit)}
                 className={`${primaryButtonBase} px-3 py-1.5 text-xs`}
               >
                 {bulkUpdate.isPending ? "Applying..." : "Apply"}

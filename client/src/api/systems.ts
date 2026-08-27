@@ -128,6 +128,7 @@ export interface BulkUpdateInput {
   ids: string[];
   ownerId?: string;
   status?: SystemStatus;
+  businessUnit?: string;
 }
 
 export function useBulkUpdateSystems() {

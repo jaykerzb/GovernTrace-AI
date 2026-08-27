@@ -10,5 +10,6 @@ server/client/
 server/prisma/dev.db
 server/prisma/dev.db-journal
 server/uploads/
+backups/
 *.log
 .DS_Store

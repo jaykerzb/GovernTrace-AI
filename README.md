@@ -166,6 +166,22 @@ Once it's set up, updates can be installed two ways:
 
 To remove everything (the service, its sudoers rule, and the repository itself — **including the database and every uploaded document**), run `bash scripts/uninstall.sh`. It requires typing a confirmation phrase before doing anything, since this is irreversible.
 
+### Backing up and restoring
+
+`scripts/backup.sh` archives the database and every uploaded document into a single timestamped tarball under `backups/` (safe to run while the service is up):
+
+```bash
+bash scripts/backup.sh
+```
+
+Pass a different destination directory as an argument if you'd rather write backups elsewhere (e.g. a mounted network drive). To restore one — which stops the service, overwrites the current database and uploads, and starts it back up — run:
+
+```bash
+bash scripts/restore.sh backups/governtrace-backup-<timestamp>.tar.gz
+```
+
+It requires typing a confirmation phrase first, since it overwrites whatever's currently there.
+
 ## The governance workflow
 
 1. **Intake** — a use case is registered through the guided wizard (Basics → Data & Deployment → Supporting Documents → Review), saving progressively so an interrupted intake can always be resumed from the system's detail page.
