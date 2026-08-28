@@ -10,6 +10,7 @@
 ![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=flat&logo=prisma&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)
 
 > **Status:** actively developed proof of concept. Functionally complete for a single-organization deployment; not yet hardened for production (see [Known limitations](#known-limitations)).
 
@@ -25,6 +26,7 @@
 - [Admin panel](#admin-panel)
 - [Project structure](#project-structure)
 - [Known limitations](#known-limitations)
+- [License](#license)
 
 ## Overview
 
@@ -228,3 +230,13 @@ This is a proof of concept, not a production deployment. Before running this for
 - Review data-retention requirements — nothing currently ages out or archives automatically
 - Note that email provider secrets (SMTP password / API key) are stored in the database in plain columns, not encrypted at rest — acceptable for local dev, not for a shared deployment
 - Consider moving document storage off local disk (`server/uploads/`) to object storage if deploying beyond a single host
+
+## License
+
+[MIT](LICENSE) © 2026 Jacob D Burke
+
+---
+
+<p align="center">
+  Built by <a href="https://github.com/jaykerzb">Jacob D Burke</a>
+</p>
